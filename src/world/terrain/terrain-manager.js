@@ -19,6 +19,16 @@ export const TERRAIN_QUALITY = {
 
 const key = (z, x, y) => `${z}/${x}/${y}`;
 
+/** Load `<name>.bin`; hosts that refuse binary files can serve `<name>.bin.json` ({"b64": "..."}) instead. */
+async function loadBinary(name) {
+  const r = await fetch(name + '.bin');
+  if (r.ok && !(r.headers.get('content-type') || '').includes('text/html')) return r.arrayBuffer();
+  const j = await fetch(name + '.bin.json').then((x) => x.json());
+  const bin = atob(j.b64), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out.buffer;
+}
+
 export class TerrainManager {
   constructor(scene, origin, opts = {}) {
     this.scene = scene; this.origin = origin;
@@ -49,7 +59,7 @@ export class TerrainManager {
     const names = ['ksfo-z12', 'global-z4'];
     const loaded = await Promise.all(names.map(async (n) => {
       try {
-        const [meta, buf] = await Promise.all([fetch(baseUrl + n + '.json').then((r) => r.json()), fetch(baseUrl + n + '.bin').then((r) => r.arrayBuffer())]);
+        const [meta, buf] = await Promise.all([fetch(baseUrl + n + '.json').then((r) => r.json()), loadBinary(baseUrl + n)]);
         return { meta, buffer: buf };
       } catch (e) { console.warn('terrain pack failed', n, e); return null; }
     }));
