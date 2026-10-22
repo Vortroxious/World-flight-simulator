@@ -1,0 +1,1 @@
+{"airports":{"ENJA":{"name":"Jan Mayensfield","lat":70.944117,"lon":-8.652074,"elev":11.9,"type":"S","iata":"","city":"","country":"NO","runways":[{"le":"06","he":"24","len":1500,"wid":29.9,"surf":"GRAVEL","lit":0,"hdg":60,"a":[70.940744,-8.669961,11.9,0],"b":[70.947488,-8.634181,11.9,0]}],"freqs":[["AFIS","Jan Mayen Information",118.1]]}},"navaids":[]}

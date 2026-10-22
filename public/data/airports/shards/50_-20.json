@@ -1,0 +1,1 @@
+{"airports":{"EIBT":{"name":"Belmullet Aerodrome","lat":54.222801,"lon":-10.0308,"elev":45.7,"type":"S","iata":"BLY","city":"Belmullet","country":"IE","runways":[{"le":"07","he":"25","len":450,"wid":18,"surf":"GRASS","lit":0,"hdg":70,"a":[54.222109,-10.034051,45.7,0],"b":[54.223493,-10.027548,45.7,0]}],"freqs":[["Radio","",123.6]]}},"navaids":[]}

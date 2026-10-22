@@ -1,0 +1,1 @@
+{"airports":{"BGKK":{"name":"Kulusuk Airport","lat":65.573601,"lon":-37.1236,"elev":35.7,"type":"M","iata":"KUS","city":"Kulusuk","country":"GL","runways":[{"le":"11","he":"29","len":1199,"wid":30.5,"surf":"UNK","lit":0,"hdg":110,"a":[65.575445,-37.135853,35.1,0],"b":[65.571756,-37.111349,31.7,0]}],"freqs":[]}},"navaids":[["DA","NDB",377,65.5706,-37.2069,0,-26.313,"Kulusuk"]]}

@@ -1,0 +1,1 @@
+{"airports":{"SCGC":{"name":"Union Glacier Blue-Ice Runway","lat":-79.777778,"lon":-83.320833,"elev":750.1,"type":"S","iata":"UGL","city":"Union Glacier","country":"AQ","runways":[{"le":"18","he":"36","len":3000,"wid":50,"surf":"ICE","lit":0,"hdg":180,"a":[-79.764288,-83.320833,750.1,0],"b":[-79.791268,-83.320833,750.1,0]}],"freqs":[]}},"navaids":[]}

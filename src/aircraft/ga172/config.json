@@ -1,0 +1,95 @@
+{
+  "id": "ga172",
+  "name": "GA-172 Skyfarer",
+  "class": "Cessna 172-class four-seat, single piston engine, high wing, fixed tricycle gear",
+  "category": "general-aviation",
+  "fidelity": "Coefficient-based 6-DOF model tuned to public C172S POH performance figures; not certified data.",
+  "mass": {
+    "empty": 767, "maxTakeoff": 1157, "crewDefault": 86, "payloadDefault": 40,
+    "inertiaAtMtow": { "Ixx": 1285, "Iyy": 1825, "Izz": 2667, "Ixz": 0 }
+  },
+  "geometry": { "wingArea": 16.17, "span": 11.0, "chord": 1.49, "length": 8.28, "eyePoint": [0.33, -0.3, -0.56] },
+  "aero": {
+    "alphaStallDeg": 17.5,
+    "CLtable": [[-90, 0], [-60, -0.85], [-45, -1.0], [-30, -0.95], [-20, -0.92], [-16, -1.08], [-14, -1.12], [-10, -0.52], [0, 0.36], [5, 0.8], [10, 1.24], [13, 1.5], [15, 1.66], [16, 1.73], [17, 1.78], [17.5, 1.8], [18, 1.76], [19, 1.56], [20, 1.4], [22, 1.25], [25, 1.15], [30, 1.08], [45, 1.0], [60, 0.85], [90, 0]],
+    "CD0": 0.031, "oswald": 0.75, "CDbeta2": 0.15,
+    "CLq": 3.9, "CLde": 0.43,
+    "Cm0": 0.03, "CmAlphaWingBody": 0.4, "CmAlphaTail": -2.2, "CmQ": -12.4, "CmAlphaDot": -5.2, "CmDe": 1.28,
+    "CYbeta": -0.393, "CYdr": -0.187,
+    "ClBeta": -0.0923, "ClP": -0.484, "ClR": 0.0798, "ClDa": 0.229, "ClDr": -0.0147,
+    "CnBeta": 0.0587, "CnP": -0.0278, "CnR": -0.0937, "CnDa": -0.0216, "CnDr": 0.0645,
+    "pFactor": 0.0035, "slipstreamYaw": 0.9,
+    "flaps": [
+      { "deg": 0, "dCL": 0, "alphaShift": 0, "dCD": 0, "dCm": 0 },
+      { "deg": 10, "dCL": 0.3, "alphaShift": 0.5, "dCD": 0.006, "dCm": -0.01 },
+      { "deg": 20, "dCL": 0.55, "alphaShift": 1.0, "dCD": 0.022, "dCm": -0.02 },
+      { "deg": 30, "dCL": 0.75, "alphaShift": 1.5, "dCD": 0.048, "dCm": -0.03 }
+    ],
+    "flapRateDegPerSec": 3.6
+  },
+  "controls": {
+    "elevatorUpDeg": 28, "elevatorDownDeg": 23, "aileronDeg": 20, "rudderDeg": 16,
+    "trimRangeRad": 0.22, "trimRatePerSec": 0.18,
+    "keyboardRate": 2.2, "keyboardReturnRate": 3.0, "nosewheelSteerDeg": 10
+  },
+  "engine": {
+    "type": "piston", "count": 1, "name": "Lycoming IO-360-class, 180 hp",
+    "maxPower": 134226, "maxRPM": 2700, "redlineRPM": 2700, "inertia": 1.6, "frictionFrac": 0.18,
+    "fuelFlowFull": 0.0106, "starterTorque": 75, "torqueRigging": 0.82, "starterAmps": 150,
+    "position": [2.0, 0, 0.0], "thrustAxis": [1, 0, 0],
+    "propeller": { "diameter": 1.905, "ct0": 0.093, "jct": 1.05, "cp0": 0.066, "jcp": 1.25, "rotation": "cw" }
+  },
+  "fuel": {
+    "densityKgL": 0.72, "type": "100LL",
+    "tanks": [
+      { "name": "LEFT", "capacityL": 106, "unusableL": 5.7, "defaultFrac": 0.75, "pos": [0.0, -1.5, -1.0] },
+      { "name": "RIGHT", "capacityL": 106, "unusableL": 5.7, "defaultFrac": 0.75, "pos": [0.0, 1.5, -1.0] }
+    ]
+  },
+  "electrical": { "batteryVolts": 24, "batteryAh": 35, "alternatorVolts": 28.5, "alternatorAmps": 60, "lowVolts": 24.5 },
+  "gear": {
+    "retractable": false,
+    "wheels": [
+      { "name": "nose", "component": "noseGear", "pos": [1.15, 0, 1.15], "k": 46000, "c": 4600, "travel": 0.25, "steer": true, "brake": false, "radius": 0.19 },
+      { "name": "leftMain", "component": "leftMainGear", "pos": [-0.45, -1.15, 1.15], "k": 37000, "c": 4600, "travel": 0.25, "steer": false, "brake": true, "radius": 0.21 },
+      { "name": "rightMain", "component": "rightMainGear", "pos": [-0.45, 1.15, 1.15], "k": 37000, "c": 4600, "travel": 0.25, "steer": false, "brake": true, "radius": 0.21 }
+    ],
+    "brakeMu": 0.65, "rollingMu": 0.018, "lateralMu": 0.8, "dragArea": 0
+  },
+  "contacts": [
+    { "name": "propTip", "component": "propeller", "pos": [2.35, 0, 0.82] },
+    { "name": "cowlBottom", "component": "engine", "pos": [1.7, 0, 0.72] },
+    { "name": "bellyFwd", "component": "fuselage", "pos": [0.6, 0, 0.72] },
+    { "name": "bellyAft", "component": "fuselage", "pos": [-1.6, 0, 0.62] },
+    { "name": "tailcone", "component": "fuselage", "pos": [-4.6, 0, 0.25] },
+    { "name": "roof", "component": "fuselage", "pos": [0.0, 0, -1.05] },
+    { "name": "finTop", "component": "vStab", "pos": [-5.55, 0, -1.55] },
+    { "name": "leftStabTip", "component": "hStab", "pos": [-5.2, -1.7, 0.0] },
+    { "name": "rightStabTip", "component": "hStab", "pos": [-5.2, 1.7, 0.0] },
+    { "name": "leftWingTip", "component": "leftWing", "pos": [-0.1, -5.5, -1.05] },
+    { "name": "rightWingTip", "component": "rightWing", "pos": [-0.1, 5.5, -1.05] },
+    { "name": "leftWingMid", "component": "leftWing", "pos": [-0.1, -3.0, -1.05] },
+    { "name": "rightWingMid", "component": "rightWing", "pos": [-0.1, 3.0, -1.05] },
+    { "name": "spinner", "component": "propeller", "pos": [2.45, 0, 0.0] }
+  ],
+  "damage": {
+    "components": {
+      "noseGear":     { "vSafe": 2.6, "vFail": 4.2, "loadLimit": 16000, "sideLimit": 7000, "detachable": true },
+      "leftMainGear": { "vSafe": 3.0, "vFail": 4.8, "loadLimit": 26000, "sideLimit": 11000, "detachable": true },
+      "rightMainGear":{ "vSafe": 3.0, "vFail": 4.8, "loadLimit": 26000, "sideLimit": 11000, "detachable": true },
+      "propeller":    { "vSafe": 0.0, "vFail": 2.5, "detachable": false },
+      "engine":       { "vSafe": 1.5, "vFail": 9.0, "detachable": false },
+      "fuselage":     { "vSafe": 1.5, "vFail": 10.0, "scrapeEnergy": 900000, "detachable": false },
+      "leftWing":     { "vSafe": 1.0, "vFail": 7.0, "scrapeEnergy": 250000, "detachable": true },
+      "rightWing":    { "vSafe": 1.0, "vFail": 7.0, "scrapeEnergy": 250000, "detachable": true },
+      "hStab":        { "vSafe": 1.0, "vFail": 6.0, "scrapeEnergy": 120000, "detachable": true },
+      "vStab":        { "vSafe": 1.0, "vFail": 6.0, "scrapeEnergy": 120000, "detachable": true }
+    },
+    "gLimitPos": 3.8, "gLimitNeg": -1.52, "ultimateFactor": 1.5, "flutterMargin": 1.12
+  },
+  "limits": {
+    "Vs0": 40, "Vs1": 48, "Vr": 55, "Vx": 62, "Vy": 74, "Vg": 68, "Vref": 65,
+    "Va": 105, "Vno": 129, "Vne": 163, "Vfe": [[10, 110], [30, 85]], "cruiseKtas": 124, "serviceCeilingFt": 14000
+  },
+  "sound": { "profile": "piston4", "cylinders": 4 }
+}

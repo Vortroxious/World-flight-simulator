@@ -1,0 +1,1 @@
+{"airports":{"UESO":{"name":"Chokurdakh Airport","lat":70.6231,"lon":147.901993,"elev":46,"type":"M","iata":"CKH","city":"Chokurdah","country":"RU","runways":[{"le":"07","he":"25","len":1900,"wid":29.9,"surf":"CON","lit":1,"hdg":70,"a":[70.620177,147.877801,46,0],"b":[70.62602,147.926192,46,0]}],"freqs":[]}},"navaids":[["LT","NDB",600,70.6367,148.015,0,-13.341,"Chokurdakh"]]}

@@ -1,0 +1,1 @@
+{"airports":{"UODD":{"name":"Dikson Airport","lat":73.517807,"lon":80.379669,"elev":14.3,"type":"M","iata":"DKS","city":"Dikson","country":"RU","runways":[{"le":"05","he":"23","len":1500,"wid":20.1,"surf":"CON","lit":1,"hdg":50,"a":[73.513472,80.361467,14.3,0],"b":[73.522141,80.39788,14.3,0]}],"freqs":[]}},"navaids":[["SU","NDB",405,73.5167,80.3817,0,29.407,"Dikson"]]}
