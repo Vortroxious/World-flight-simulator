@@ -31,6 +31,7 @@ A browser flight simulator built with Three.js / WebGL2. It has a real 6-degree-
   - Wind profile, gusts, turbulence (with a rotational component), QNH and temperature, and visibility fog.
   - Real solar position for any date and time, a night sky, and runway, approach and taxi lighting with a working PAPI.
 - **Sound**, all synthesised in Web Audio: engine, propeller, starter, wind, stall horn, flap motor, tyres, impacts.
+- **Phones and tablets:** touch stick, throttle lever, rudder, brakes, flaps and trim buttons, touch look-around and pinch zoom, and a responsive menu.
 - **UI.** Main menu with flight setup, a world map of every airport, weather and time, assistance and damage mode, graphics presets (Low to Ultra, plus dynamic resolution), and a controls reference. In flight: HUD, debug/telemetry panel, pause menu.
 
 ## Requirements
@@ -60,6 +61,15 @@ npm run preview      # serve the production build locally
 3. At about 55 kt, pull back with **↓** (or **S**) to about 8° nose-up. Climb at 74 kt.
 4. **V** cycles views (cockpit, chase, orbit, tower). **I** zooms on the instruments. Right-drag to look around. **H** toggles the HUD, **`** toggles the debug panel, **Esc** pauses.
 
+**On a phone or tablet** (landscape recommended), on-screen controls appear automatically:
+- **Left stick** — drag down to pull (nose up), up to push, sideways to roll. It re-centres when you let go.
+- **◀ ▶** — rudder and nose-wheel steering.
+- **THR lever** (right) — slide up for power.
+- **BRK** (hold) and **PARK** — brakes and parking brake.
+- **Top-right buttons** — flaps, trim, VIEW, PANEL (instrument zoom), HUD and pause.
+
+In the cockpit, tap switches and knobs, drag empty space to look around, and pinch to zoom. You can force the controls on or off, or invert the stick, under Menu → Controls.
+
 The full key list is under **Menu → Controls**. The cold-and-dark start procedure is also there. A gamepad works too (left stick, right stick X for rudder, triggers for throttle).
 
 ## Tests
@@ -67,7 +77,7 @@ The full key list is under **Menu → Controls**. The cold-and-dark start proced
 ```bash
 npm test             # 75 unit + scenario tests (Vitest, Node): geodesy, atmosphere, aero, engine,
                      # systems, instruments, collision, damage, terrain, airports, full-flight scenarios
-npm run test:e2e     # 10 browser end-to-end tests (Playwright + Chromium): boot, search, world map,
+npm run test:e2e     # 11 browser end-to-end tests (incl. an emulated touch phone) (Playwright + Chromium): boot, search, world map,
                      # start flight, keyboard + mouse cockpit input, takeoff/climb, crash → replay → restart,
                      # procedural airport approach, no runtime errors. Screenshots in tests/e2e/output/
 ```

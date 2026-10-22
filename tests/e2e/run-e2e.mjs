@@ -82,8 +82,10 @@ await test('keyboard: flaps (F7), throttle (PageUp hold), HUD toggle (H), view c
   assert((await sim(() => window.__sim.ac.controls.flapsLever)) === 1, 'flap lever 1');
   await page.keyboard.press('F6');
   const t0 = await sim(() => window.__sim.ac.controls.throttle);
-  await page.keyboard.down('PageUp'); await page.waitForTimeout(700); await page.keyboard.up('PageUp');
-  assert((await sim(() => window.__sim.ac.controls.throttle)) > t0 + 0.05, 'throttle increased');
+  await page.keyboard.down('PageUp');
+  const ok = await page.waitForFunction((t) => window.__sim.ac.controls.throttle > t + 0.05, t0, { timeout: 15000 }).then(() => true, () => false);
+  await page.keyboard.up('PageUp');
+  assert(ok, 'throttle increased while PageUp held');
   await page.keyboard.press('KeyH');
   assert(await page.$eval('#hud', (e) => e.style.display === 'none'), 'HUD hidden');
   await page.keyboard.press('KeyH');
@@ -181,6 +183,48 @@ await test('no uncaught errors during the session', async () => {
   const last = await sim(() => window.__sim.lastError());
   assert(!last, 'render loop error: ' + last);
   assert(pageErrors.length === 0, pageErrors.join(' | '));
+});
+
+await page.goto('about:blank'); // stop the desktop page rendering while the phone test runs
+
+await test('phone (touch, landscape): menu reachable, stick / throttle / flaps / cockpit tap / look-around', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
+  const p = await ctx.newPage();
+  p.on('pageerror', (e) => pageErrors.push('[mobile] ' + e.message));
+  const cdp = await ctx.newCDPSession(p);
+  const t = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
+  const box = (sel) => p.$eval(sel, (e) => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, top: r.top }; });
+  await p.goto(URL);
+  await p.waitForSelector('#menu', { timeout: 60000 });
+  await p.evaluate(() => { try { localStorage.clear(); } catch {} });
+  await p.tap('#start-flight');
+  await p.waitForFunction(() => window.__sim?.ac && !document.getElementById('loading'), null, { timeout: 90000 });
+  assert(await p.$('#touch-controls'), 'touch controls shown on a touch device');
+  const thr = await box('.tthr');
+  await t('touchStart', thr.x, thr.top + thr.h - 4); await t('touchMove', thr.x, thr.top + thr.h / 2); await t('touchMove', thr.x, thr.top + 2); await t('touchEnd');
+  assert((await p.evaluate(() => window.__sim.ac.controls.throttle)) > 0.95, 'throttle lever sets full power');
+  const flapDown = await (await p.$$('.tbuttons .tbtn'))[1].boundingBox();
+  await t('touchStart', flapDown.x + 20, flapDown.y + 15); await t('touchEnd');
+  assert((await p.evaluate(() => window.__sim.ac.controls.flapsLever)) === 1, 'flap button lowers flaps');
+  const st = await box('.tstick');
+  await t('touchStart', st.x, st.y); await t('touchMove', st.x + st.w * 0.2, st.y + st.h * 0.3);
+  const ax = await p.evaluate(() => window.__sim.flight.input.update(0.016, window.__sim.ac));
+  assert(ax.elevator > 0.3 && ax.aileron > 0.1, `stick drives elevator/aileron ${ax.elevator.toFixed(2)}/${ax.aileron.toFixed(2)}`);
+  await t('touchEnd');
+  assert(!(await p.evaluate(() => window.__sim.flight.input.touch.active)), 'stick re-centres on release');
+  const yaw0 = await p.evaluate(() => window.__sim.flight.rig.look.yaw);
+  await t('touchStart', 420, 120); await t('touchMove', 470, 125); await t('touchMove', 520, 130); await t('touchEnd');
+  assert((await p.evaluate(() => window.__sim.flight.rig.look.yaw)) !== yaw0, 'one-finger drag looks around');
+  // stop the aircraft (it has been rolling at full power) so the cockpit is steady for the tap
+  await p.evaluate(() => { const ac = window.__sim.ac; ac.controls.throttle = 0; ac.v = [0, 0, 0]; ac.w = [0, 0, 0]; ac.controls.parkingBrake = true; const r = window.__sim.flight.rig; r.look.yaw = 0.05; r.look.pitch = -0.35; });
+  // wait until the rendered camera has settled (two projections 0.5 s apart agree)
+  const project = () => p.evaluate(() => { const f = window.__sim.flight, cam = window.__sim.app.camera; const m = f.cockpit.switchMeshes.beacon; const v = m.getWorldPosition(m.position.clone()).project(cam); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, b: window.__sim.ac.elec.switches.beacon }; });
+  let sw = await project();
+  for (let i = 0; i < 40; i++) { await p.waitForTimeout(500); const n = await project(); const still = Math.hypot(n.x - sw.x, n.y - sw.y) < 1; sw = n; if (still) break; }
+  await t('touchStart', sw.x, sw.y); await t('touchEnd');
+  assert((await p.evaluate(() => window.__sim.ac.elec.switches.beacon)) !== sw.b, 'tapping a cockpit switch toggles it');
+  await p.screenshot({ path: path.join(OUT, '09-phone-landscape.png') });
+  await ctx.close();
 });
 
 await browser.close();

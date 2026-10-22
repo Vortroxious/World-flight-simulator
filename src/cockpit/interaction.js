@@ -40,15 +40,22 @@ export class CockpitInteraction {
   }
 
   down(e) {
+    (this.pointers ||= new Map()).set(e.pointerId, { x: e.clientX, y: e.clientY });
+    this.touch = e.pointerType === 'touch';
+    if (this.pointers.size === 2) { this.pinch = this.pinchDist(); this.button = -1; return; }
     this.button = e.button; this.dragged = 0; this.last = { x: e.clientX, y: e.clientY };
     const obj = this.pick(e);
     if (obj) {
       this.active = obj;
       obj.userData.ctl.down?.(e.button, e);
       this.canvas.setPointerCapture?.(e.pointerId);
+      if (this.touch) { this.setHover(obj); this.updateTooltip(e, obj); clearTimeout(this._tt); this._tt = setTimeout(() => { this.tooltip && (this.tooltip.style.display = 'none'); this.setHover(null); }, 1600); }
     }
   }
+  pinchDist() { const p = [...this.pointers.values()]; return Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); }
   up(e) {
+    this.pointers?.delete(e.pointerId);
+    if (this.pinch) { if (this.pointers.size < 2) this.pinch = 0; this.button = -1; return; }
     if (this.active) {
       const ctl = this.active.userData.ctl;
       if (this.dragged < 4) { ctl.click?.(e.button, e); this.onAction?.(); }
@@ -57,11 +64,18 @@ export class CockpitInteraction {
     this.active = null; this.button = -1;
   }
   move(e) {
+    if (this.pointers?.has(e.pointerId)) this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.pinch && this.pointers.size === 2) {
+      const d = this.pinchDist();
+      if (Math.abs(d - this.pinch) > 8) { this.rig.zoom(d > this.pinch ? -1 : 1); this.pinch = d; }
+      return;
+    }
     const dx = e.clientX - this.last.x, dy = e.clientY - this.last.y;
     this.last = { x: e.clientX, y: e.clientY };
     if (this.button >= 0) this.dragged += Math.abs(dx) + Math.abs(dy);
     if (this.active && this.button === 0) { this.active.userData.ctl.drag?.(dx, dy); this.updateTooltip(e, this.active); return; }
-    if (this.button === 2 || (this.button === 0 && !this.active && !this.rig.isCockpit) || (this.button === 1)) { this.rig.freeLook(dx, dy); return; }
+    if (this.button === 2 || (this.button === 0 && !this.active && (!this.rig.isCockpit || e.pointerType === 'touch')) || (this.button === 1)) { this.rig.freeLook(dx, dy); return; }
+    if (e.pointerType === 'touch') return; // no hover on touch screens
     const obj = this.pick(e);
     this.setHover(obj);
     this.updateTooltip(e, obj);

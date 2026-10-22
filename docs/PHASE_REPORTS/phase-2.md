@@ -1,6 +1,6 @@
 # Phase 2 report: playable prototype
 
-**Build:** v0.2.0. **Tests:** 75/75 unit and scenario tests (Vitest), 10/10 browser end-to-end tests (Playwright + Chromium, software GL).
+**Build:** v0.2.0. **Tests:** 75/75 unit and scenario tests (Vitest), 11/11 browser end-to-end tests (Playwright + Chromium, software GL, including an emulated touch phone).
 
 ## Acceptance criteria (from the brief)
 
@@ -19,6 +19,17 @@
 | Restart after crash | ✅ | Crash report, then replay, restart or menu (E2E). |
 | Airport selection interface | ✅ | Search by ICAO, IATA, name or city; world map click; runway, stand or final-approach start. |
 | Stable performance on documented hardware | ⚠️ **Not verified** | No GPU in the build environment: software rendering gave about 5–8 fps. The simulation stays stable because of the fixed step. Real-hardware measurement is Phase 6. Use the Low preset and dynamic resolution on integrated GPUs. |
+
+## Mobile / touch (added after the first Phase 2 build)
+- On-screen controls appear on touch devices (setting: Auto / On / Off):
+  - virtual stick with an expo curve
+  - throttle lever
+  - rudder, brake and parking-brake buttons
+  - flaps, trim, view, panel-zoom, HUD and pause buttons
+- One-finger look-around and pinch zoom in the cockpit. Tap-to-operate cockpit controls with a short tooltip.
+- The menu becomes a scrollable tab strip with a floating Start button on small screens. All touch elements respect safe-area insets.
+- **Verified only with Chromium's phone emulation** (touch events, 844×390 landscape and portrait). It has **not** been tested on real iOS or Android devices, and real-device performance is unmeasured.
+- Fixed along the way: a CSS rule made every overlay capture pointer events, so the HUD blocked clicks on desktop and the touch layer would have blocked the cockpit.
 
 ## Simplified or approximate (by design, documented)
 - **Flight model** comes from public data with approximate derivatives. It is not certified. Wind and turbulence are an airmass model: mean wind profile, gusts, first-order Markov turbulence and roll gusts.
@@ -51,6 +62,6 @@
 ```
 npm install
 npm test            # 75 tests
-npm run test:e2e    # 10 browser tests + screenshots in tests/e2e/output/
+npm run test:e2e    # 11 browser tests + screenshots in tests/e2e/output/
 npm run dev         # fly
 ```

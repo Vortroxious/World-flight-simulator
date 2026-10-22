@@ -254,9 +254,27 @@ export class Menu {
     const b = h('div', { class: 'bindings' });
     for (const [a, keys] of Object.entries(DEFAULT_BINDINGS)) b.append(h('div', {}, ACTION_LABELS[a] || a), h('div', {}, ...keys.map((k, i) => [i ? ' / ' : '', h('code', {}, k.replace('Key', '').replace('Digit', ''))])));
     main.append(h('div', { class: 'grid2' }, h('div', { class: 'card' }, b), h('div', { class: 'card' }, h('h3', {}, 'Gamepad'), h('div', { class: 'note' }, 'Left stick: pitch/roll · right stick X: rudder · right/left trigger: throttle up/down · A: brakes. Deadzone 8%.'),
+      h('h3', { style: { marginTop: '14px' } }, 'Touch screens (phones & tablets)'),
+      this.touchSettings(),
+      h('ul', { class: 'note' },
+        h('li', {}, 'Left stick: drag down to pull (nose up), up to push, sideways to roll. It re-centres when released.'),
+        h('li', {}, '◀ ▶ under the stick: rudder / nose-wheel steering (hold).'),
+        h('li', {}, 'THR lever (right): slide up for power. BRK: hold for wheel brakes. PARK: parking brake.'),
+        h('li', {}, 'Top-right: flaps up/down, trim (hold), VIEW, PANEL (instrument zoom), HUD, pause.'),
+        h('li', {}, 'Cockpit: tap switches, knobs and levers; drag empty space to look around; pinch to zoom.'),
+        h('li', {}, 'Landscape orientation recommended.')),
       h('h3', { style: { marginTop: '14px' } }, 'Engine start (cold & dark)'),
       h('ol', { class: 'note' }, h('li', {}, 'Parking brake SET, fuel selector BOTH'), h('li', {}, 'BAT master ON, beacon ON'), h('li', {}, 'Mixture RICH, throttle ~10%'), h('li', {}, 'Ignition key to START (hold E or click-and-hold the key) until the engine fires'), h('li', {}, 'ALT ON, AVIONICS ON, check oil pressure'), h('li', {}, 'Click the heading-indicator knob to sync it to the compass')))));
     this.startBar(main);
+  }
+
+  touchSettings() {
+    const s = this.s;
+    const sel = h('select', { id: 'touch-mode' }, ...[['auto', 'Auto (show on touch screens)'], ['on', 'Always show'], ['off', 'Never show']].map(([v, l]) => h('option', { value: v, selected: s.touchControls === v }, l)));
+    sel.addEventListener('change', () => { s.touchControls = sel.value; this.save(); });
+    const inv = h('input', { type: 'checkbox', id: 'touch-invert', checked: s.touchInvertPitch });
+    inv.addEventListener('change', () => { s.touchInvertPitch = inv.checked; this.save(); });
+    return h('div', {}, h('label', { for: 'touch-mode' }, 'On-screen controls'), sel, h('div', { style: { marginTop: '8px' } }, inv, ' Invert stick pitch (drag up = nose up)'));
   }
 
   tab_about(main) {

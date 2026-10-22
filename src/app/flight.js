@@ -20,6 +20,7 @@ import { DebugPanel } from '../ui/debug.js';
 import { Loading, pauseMenu, crashReport, replayBar } from '../ui/overlays.js';
 import { utcFromLocal } from './settings.js';
 import { MAGS } from '../sim/fdm/propulsion/piston.js';
+import { TouchControls, isTouchDevice } from '../ui/touch.js';
 
 const TIME_ACCEL = [1, 8, 32, 128];
 
@@ -109,6 +110,16 @@ export class Flight {
       this.debug = new DebugPanel(app.ui);
       this.input = new Input(app.canvas, { sensitivity: s.sensitivity });
       this.bindInput();
+      this.touchEnabled = s.touchControls === 'on' || (s.touchControls !== 'off' && isTouchDevice());
+      if (this.touchEnabled) {
+        this.touchUI = new TouchControls(app.ui, this.input, this.cmd, {
+          view: () => { this.rig.next(); this.hud.toast(`View: ${this.rig.mode}`); },
+          instruments: () => this.rig.toggleInstrumentView(),
+          hud: () => { this.hud.setVisible(!this.hud.visible); this.s.hud = this.hud.visible; },
+          pause: () => this.togglePause(),
+        }, { invertPitch: s.touchInvertPitch });
+        document.body.classList.add('touch-on');
+      }
       this.interaction = new CockpitInteraction(app.canvas, app.camera, this.rig, this.hud.tooltip);
       this.interaction.setControls(this.cockpit.controls);
       app.scene.add(this.interaction.highlight);
@@ -120,7 +131,9 @@ export class Flight {
     }
     const tower = this.spawn ? this.airport.spawnPoints().find((p) => p.type === 'parking') : null;
     this.towerLL = tower || this.spawn;
-    this.hud.toast(this.s.coldDark ? 'Cold & dark: see Controls tab for the start procedure' : 'Full throttle: F4 or PageUp · rotate ~55 kt with ↓ (or S) · V cycles views');
+    this.hud.toast(this.s.coldDark ? 'Cold & dark: see Controls tab for the start procedure'
+      : this.touchEnabled ? 'Slide THR up to full · at ~55 kt drag the stick down to rotate · drag in the cockpit to look around'
+      : 'Full throttle: F4 or PageUp · rotate ~55 kt with ↓ (or S) · V cycles views', 5000);
   }
 
   env() {
@@ -206,6 +219,7 @@ export class Flight {
   onCrash() {
     if (this.crashed) return;
     this.crashed = true; this.crashAt = performance.now();
+    this.touchUI?.setVisible(false);
     this.hud.toast(this.ac.damage.ditched && !this.ac.damage.destroyed ? 'Ditched' : `CRASH: ${this.ac.damage.destroyedReason}`, 4000);
   }
 
@@ -248,7 +262,8 @@ export class Flight {
       if (i.isHeld('mixtureLean')) c.mixture(-0.4 * realDt);
       if (i.isHeld('trimUp')) c.trim(0.3 * realDt);
       if (i.isHeld('trimDown')) c.trim(-0.3 * realDt);
-      const brake = i.isHeld('brakes') || i.gpBrake ? 1 : 0;
+      const brake = i.isHeld('brakes') || i.gpBrake || i.touchBrake ? 1 : 0;
+      this.touchUI?.update(realDt, ac);
       if (ac.setBrakesHeld && (ac.controls.throttle > 0.25 || brake)) ac.setBrakesHeld = false;
       const b = o?.brake ?? (ac.setBrakesHeld ? 1 : brake);
       c.setBrakes(b, b);
@@ -347,6 +362,7 @@ export class Flight {
   dispose() {
     const app = this.app;
     this.input?.dispose();
+    this.touchUI?.remove(); document.body.classList.remove('touch-on');
     this.hud?.remove(); this.debug?.remove(); this.pauseEl?.remove(); this.crashEl?.remove(); this.replayUI?.el.remove(); this.loading?.remove();
     this.effects?.clear();
     if (this.model) { app.scene.remove(this.model.root); this.model.root.traverse((o) => { o.geometry?.dispose(); }); }

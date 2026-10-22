@@ -20,6 +20,8 @@ export const DEFAULTS = {
   volume: 0.8,
   hud: true,
   dynamicResolution: true,
+  touchControls: 'auto', // auto | on | off
+  touchInvertPitch: false,
 };
 
 export function loadSettings() {

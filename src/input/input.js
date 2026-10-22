@@ -28,6 +28,8 @@ export class Input {
     this.axes = { elevator: 0, aileron: 0, rudder: 0 };
     this.mouseYoke = false; this.mouse = { x: 0, y: 0 };
     this.gamepad = { connected: false, deadzone: 0.08, invertPitch: false };
+    this.touch = { active: false, elevator: 0, aileron: 0, rudder: 0 }; // fed by on-screen touch controls
+    this.touchBrake = 0;
     this.enabled = true;
     this.lookup = new Map();
     this.rebuild();
@@ -90,7 +92,11 @@ export class Input {
       if (lt > 0.05) this.emit('throttleAxis', -lt * dt);
       this.gpBrake = gp.buttons[0]?.pressed ? 1 : 0;
     }
-    if (!usedGamepad) {
+    if (!usedGamepad && this.touch.active) {
+      this.axes.aileron = this.touch.aileron * this.sensitivity;
+      this.axes.elevator = this.touch.elevator * this.sensitivity;
+    }
+    if (!usedGamepad && !this.touch.active) {
       if (this.mouseYoke) {
         this.axes.aileron = clamp(this.mouse.x * 1.3, -1, 1) * this.sensitivity;
         this.axes.elevator = clamp(this.mouse.y * 1.3, -1, 1) * this.sensitivity;
@@ -98,8 +104,10 @@ export class Input {
         this.axes.elevator = kb('pitchUp', 'pitchDown', this.axes.elevator);
         this.axes.aileron = kb('rollRight', 'rollLeft', this.axes.aileron);
       }
-      this.axes.rudder = kb('yawRight', 'yawLeft', this.axes.rudder);
+      if (!this.touch.rudder) this.axes.rudder = kb('yawRight', 'yawLeft', this.axes.rudder);
     }
+    if (this.touch.rudder) this.axes.rudder = moveToward(this.axes.rudder, this.touch.rudder, rate * dt);
+    else if (this.touch.active && !usedGamepad) this.axes.rudder = kb('yawRight', 'yawLeft', this.axes.rudder);
     return this.axes;
   }
 

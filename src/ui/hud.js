@@ -44,11 +44,11 @@ export class Hud {
     this.el.innerHTML = `
       <div class="big"><div><b>${Math.round(s.ias / KT)}</b><span>IAS KT</span></div><div><b>${Math.round(s.alt / FT).toLocaleString()}</b><span>ALT FT</span></div><div><b>${String(Math.round(s.headingMag) % 360).padStart(3, '0')}</b><span>HDG °M</span></div></div>
       <div class="line"><i>VS</i><span>${Math.round(s.vs / FT * 60)} fpm</span><i>GS</i><span>${Math.round(s.gs / KT)} kt</span><i>AGL</i><span>${Math.round(s.agl / FT)} ft</span></div>
-      <div class="line"><i>RPM</i><span>${Math.round(s.rpm)}</span><i>THR</i><span>${Math.round(ac.controls.throttle * 100)}%</span><i>MIX</i><span>${Math.round(ac.controls.mixture * 100)}%</span></div>
-      <div class="line"><i>FLAPS</i><span>${Math.round(s.flaps)}°</span><i>TRIM</i><span>${(ac.controls.trim * 100).toFixed(0)}</span><i>FUEL</i><span>${((s.fuelL + s.fuelR) / 3.785).toFixed(1)} gal</span></div>
-      <div class="line"><i>MAGS</i><span>${MAG_LABEL[ac.engine.magnetos]}</span><i>BRK</i><span>${ac.controls.parkingBrake ? 'PARK' : ac.controls.brakeL > 0 ? 'ON' : 'OFF'}</span><i>${ac.engine.running ? 'ENG RUN' : 'ENG OFF'}</i></div>
-      <div class="line"><i>POS</i><span>${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</span></div>
-      <div class="line"><i>WIND</i><span>${Math.round(windFrom)}° / ${Math.round(wind / KT)} kt</span><i>VIS</i><span>${extra.visibilityKm} km</span></div>
+      <div class="line ext"><i>RPM</i><span>${Math.round(s.rpm)}</span><i>THR</i><span>${Math.round(ac.controls.throttle * 100)}%</span><i>MIX</i><span>${Math.round(ac.controls.mixture * 100)}%</span></div>
+      <div class="line ext"><i>FLAPS</i><span>${Math.round(s.flaps)}°</span><i>TRIM</i><span>${(ac.controls.trim * 100).toFixed(0)}</span><i>FUEL</i><span>${((s.fuelL + s.fuelR) / 3.785).toFixed(1)} gal</span></div>
+      <div class="line ext"><i>MAGS</i><span>${MAG_LABEL[ac.engine.magnetos]}</span><i>BRK</i><span>${ac.controls.parkingBrake ? 'PARK' : ac.controls.brakeL > 0 ? 'ON' : 'OFF'}</span><i>${ac.engine.running ? 'ENG RUN' : 'ENG OFF'}</i></div>
+      <div class="line ext"><i>POS</i><span>${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</span></div>
+      <div class="line ext"><i>WIND</i><span>${Math.round(windFrom)}° / ${Math.round(wind / KT)} kt</span><i>VIS</i><span>${extra.visibilityKm} km</span></div>
       ${nav ? `<div class="line"><i>${extra.nav.mode === 'DTO' ? 'D→' : 'NRST'} ${nav.ident}</i><span>${Math.round(nav.brgMag)}° ${nav.distNm.toFixed(1)} NM</span></div>` : ''}
       ${s.onGround ? `<div class="line"><i>SURFACE</i><span>${s.surface}</span></div>` : ''}
       ${worst || dmg.destroyed ? `<div class="line dmg"><i>DAMAGE</i><span>${dmg.destroyed ? 'DESTROYED' : worst}</span></div>` : ''}
