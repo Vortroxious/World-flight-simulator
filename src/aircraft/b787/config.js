@@ -4,7 +4,7 @@ import { defineAircraft } from '../builder.js';
 export default defineAircraft({
   id: 'b787', name: 'WB-789 Horizon', class: '787-9-class widebody twinjet, fly-by-wire yoke with envelope protection', category: 'transport', family: 'widebody',
   mass: { empty: 128850, maxTakeoff: 254000, crewDefault: 800, payloadDefault: 25000 },
-  geometry: { wingArea: 377, span: 60.1, chord: 7.5, length: 62.8, fuselageDia: 5.77, dihedralDeg: 6, sweepDeg: 32, stabSpan: 21, eyePoint: [28.4, -0.6, -1.3] },
+  geometry: { wingArea: 377, span: 60.1, chord: 7.5, length: 62.8, fuselageDia: 5.77, dihedralDeg: 6, sweepDeg: 32, stabSpan: 21, eyePoint: [26.4, -0.6, -1.3] },
   layout: { noseX: 25.0, mainX: -0.9, mainY: 4.9, cgHeight: 5.15, staticDeflection: 0.16, noseTipX: 30.0, bellyZ: 2.88, roofZ: -2.88, tailStrikeX: -20, tailStrikeZ: 1.9, finX: -31, finTopZ: -11.85, stabX: -29, stabZ: -0.5, wingTipX: -10, wingZ: 2.0, mainWheelRadius: 0.68 },
   engine: { type: 'turbofan', maxThrust: 320000, idleN1: 20, idleN2: 60, tsfc: 0.88e-5, densityLapse: 0.8, machLapse: 0.5, reverser: { efficiency: 0.35 }, inletArea: 6.2 },
   engines: [{ position: [6.0, -10.0, 2.6], thrustAxis: [1, 0, 0], nacelleRadius: 1.75 }, { position: [6.0, 10.0, 2.6], thrustAxis: [1, 0, 0], nacelleRadius: 1.75 }],

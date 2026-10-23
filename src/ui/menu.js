@@ -15,8 +15,12 @@ const ACTION_LABELS = {
   flapsUp: 'Flaps up one notch', flapsDown: 'Flaps down one notch', flapsRetract: 'Flaps fully up', flapsFull: 'Flaps full', trimUp: 'Trim nose up', trimDown: 'Trim nose down',
   brakes: 'Brakes (hold)', parkingBrake: 'Parking brake', starter: 'Engine start (ignition to START while held)', magnetosUp: 'Magnetos +', magnetosDown: 'Magnetos −',
   view: 'Cycle view', cockpitView: 'Cockpit view', instrumentView: 'Instrument zoom view', hud: 'Toggle HUD', debug: 'Debug panel', pause: 'Pause', restart: 'Restart flight',
-  menu: 'Menu', mouseYoke: 'Mouse-yoke mode', lookBack: 'Look back', resetView: 'Reset view', sound: 'Toggle sound', dgSync: 'Sync heading indicator to compass', directTo: 'GPS Direct-To nearest airport',
+  menu: 'Menu', mouseYoke: 'Mouse-yoke mode', lookBack: 'Look back', resetView: 'Reset view', sound: 'Toggle sound', dgSync: 'Sync heading indicator to compass', directTo: 'Direct-To nearest airport (GPS / FMS)',
   timeAccel: 'Cycle time-of-day acceleration', landingLight: 'Landing light', strobe: 'Strobe lights', master: 'Master switch (BAT+ALT)',
+  gear: 'Landing gear up/down', speedbrake: 'Speed brake extend/retract', armSpoilers: 'Arm ground spoilers', reverse: 'Reverse thrust (on ground, at idle)', propUp: 'Propeller levers forward', propDown: 'Propeller levers back (feather)',
+  autoStart: 'Automatic engine start (turbine aircraft)', masterReset: 'Master warning/caution reset',
+  apToggle: 'Autopilot on/off', atToggle: 'Autothrottle on/off', apHdg: 'AP heading mode', apNav: 'AP NAV (direct-to course)', apApp: 'AP approach (LOC + G/S)', apAlt: 'AP altitude hold', apVs: 'AP vertical speed', apFlc: 'AP level change (FLC)',
+  hdgUp: 'Heading bug +1°', hdgDown: 'Heading bug −1°', altUp: 'Altitude select +100 ft', altDown: 'Altitude select −100 ft', spdUp: 'Speed select +1 kt', spdDown: 'Speed select −1 kt', vsUp: 'V/S select +100', vsDown: 'V/S select −100',
 };
 
 export class Menu {
@@ -35,7 +39,7 @@ export class Menu {
 
   render() {
     const side = h('div', { class: 'side' },
-      h('div', { class: 'brand' }, 'WORLD FLIGHT SIMULATOR', h('small', {}, 'Phase 2 prototype · v0.2')),
+      h('div', { class: 'brand' }, 'WORLD FLIGHT SIMULATOR', h('small', {}, 'Phase 3 · v0.3')),
       ...TABS.map(([id, label]) => h('button', { class: 'tab' + (this.tab === id ? ' active' : ''), 'data-tab': id, onclick: () => { this.tab = id; this.render(); } }, label)),
       h('div', { style: { flex: 1 } }),
       h('button', { class: 'primary', id: 'start-flight', onclick: () => this.start() }, 'Start Flight ▸'),
@@ -58,18 +62,29 @@ export class Menu {
   tab_flight(main) {
     main.append(h('h2', {}, 'Flight setup'), h('div', { class: 'sub' }, 'Choose aircraft, departure airport and starting position.'));
     const grid = h('div', { class: 'grid2' });
-    // Aircraft
-    const ac = h('div', { class: 'card' }, h('h3', {}, 'Aircraft'));
-    for (const [id, cfg] of Object.entries(this.app.aircraft)) {
-      ac.append(h('div', { class: 'list' }, h('div', { class: 'row sel' }, h('b', {}, cfg.id.toUpperCase()), cfg.name, h('span', {}, cfg.class))));
-      const L = cfg.limits;
-      ac.append(h('div', { class: 'kv', style: { marginTop: '10px' } },
-        h('div', {}, 'Engine'), h('div', {}, cfg.engine.name), h('div', {}, 'Max takeoff mass'), h('div', {}, `${cfg.mass.maxTakeoff} kg`),
-        h('div', {}, 'Stall (flaps up / full)'), h('div', {}, `${L.Vs1} / ${L.Vs0} KCAS`), h('div', {}, 'Rotate · Vy · Vne'), h('div', {}, `${L.Vr} · ${L.Vy} · ${L.Vne} kt`),
-        h('div', {}, 'Fuel'), h('div', {}, `${Math.round(cfg.fuel.tanks.reduce((s, t) => s + t.capacityL, 0) / 3.785)} US gal`)));
-      ac.append(h('div', { class: 'note' }, cfg.fidelity));
-    }
-    ac.append(h('div', { class: 'note' }, 'More aircraft (turboprop, airliners, fighter, cargo) arrive in Phase 3 — see docs/ROADMAP.md.'));
+    // Aircraft picker
+    const ac = h('div', { class: 'card', id: 'aircraft-card' }, h('h3', {}, 'Aircraft'));
+    const ENG = { piston: 'Piston', turboprop: 'Turboprop', turbofan: 'Turbofan' };
+    const acList = h('div', { class: 'list', id: 'aircraft-list' }, ...Object.entries(this.app.aircraft).map(([id, cfg]) => {
+      const e = cfg.engines?.[0] ?? cfg.engine;
+      return h('div', { class: 'row' + (id === this.s.aircraft ? ' sel' : ''), 'data-aircraft': id, onclick: () => { this.s.aircraft = id; this.save(); this.render(); } },
+        h('b', {}, id.toUpperCase()), cfg.name, h('span', {}, `${cfg.class.split(',')[0]} · ${(cfg.engines?.length ?? 1)}× ${ENG[e.type] ?? e.type}`));
+    }));
+    ac.append(acList);
+    const cfg = this.app.aircraft[this.s.aircraft] ?? this.app.aircraft.ga172, L = cfg.limits;
+    const e0 = cfg.engines?.[0] ?? cfg.engine;
+    const rating = e0.type === 'turbofan' ? `${(e0.maxThrust / 1000).toFixed(0)} kN${e0.afterburner ? ` (${(e0.maxThrust * e0.afterburner.thrustMult / 1000).toFixed(0)} kN AB)` : ''}` : `${Math.round((e0.maxPower ?? e0.ratedPower ?? 0) / 745.7)} shp`;
+    const fuelL = cfg.fuel.tanks.reduce((t, k) => t + k.capacityL, 0);
+    ac.append(h('div', { class: 'kv', style: { marginTop: '10px' } },
+      h('div', {}, 'Class'), h('div', {}, cfg.class),
+      h('div', {}, 'Engines'), h('div', {}, `${cfg.engines?.length ?? 1} × ${e0.name ?? ENG[e0.type] ?? e0.type} · ${rating}`),
+      h('div', {}, 'Max takeoff mass'), h('div', {}, `${cfg.mass.maxTakeoff.toLocaleString()} kg`),
+      h('div', {}, 'Stall (flaps up / full)'), h('div', {}, `${L.Vs1} / ${L.Vs0} KCAS`),
+      h('div', {}, 'Rotate · cruise'), h('div', {}, `${L.Vr} kt · ${L.cruiseKtas ? L.cruiseKtas + ' KTAS' : `Vy ${L.Vy} kt`}`),
+      h('div', {}, 'Fuel'), h('div', {}, cfg.fuel.type === 'avgas' || !cfg.engines ? `${Math.round(fuelL / 3.785)} US gal` : `${Math.round(fuelL * cfg.fuel.densityKgL).toLocaleString()} kg`),
+      h('div', {}, 'Flight deck'), h('div', {}, { 'glass-airliner': `Glass (PFD/ND/EICAS, MCP, CDU) · ${cfg.cockpit?.input}`, 'glass-turboprop': 'Glass (PFD/MFD/engine), yoke', 'fighter-hud': 'HUD + MFDs, side-stick' }[cfg.cockpit?.type] ?? 'Analogue six-pack'),
+      ...(cfg.fbw ? [h('div', {}, 'Flight controls'), h('div', {}, `Fly-by-wire (${cfg.fbw.law} law)`)] : [])));
+    ac.append(h('div', { class: 'note' }, cfg.fidelity ?? 'Class-typical data, not certified.'));
     // Airport search
     const ap = h('div', { class: 'card' }, h('h3', {}, 'Departure airport'));
     const input = h('input', { type: 'text', id: 'airport-search', placeholder: 'Search ICAO / IATA / name / city (e.g. KSFO, SFO, Oakland)', value: '' });

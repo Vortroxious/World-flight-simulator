@@ -4,7 +4,7 @@ import { defineAircraft } from '../builder.js';
 export default defineAircraft({
   id: 'kingair', name: 'TP-200 Stratus', class: 'King Air 200-class twin turboprop, T-tail, pressurised, retractable gear', category: 'turboprop', family: 'twin-turboprop',
   mass: { empty: 3700, maxTakeoff: 5670, crewDefault: 170, payloadDefault: 400 },
-  geometry: { wingArea: 28.15, span: 16.61, chord: 1.98, length: 13.34, fuselageDia: 1.6, dihedralDeg: 6, stabSpan: 5.6, eyePoint: [4.2, -0.38, -0.25] },
+  geometry: { wingArea: 28.15, span: 16.61, chord: 1.98, length: 13.34, fuselageDia: 1.6, dihedralDeg: 6, stabSpan: 5.6, eyePoint: [4.0, -0.38, -0.25] },
   layout: { noseX: 4.3, mainX: -0.6, mainY: 2.6, cgHeight: 2.0, staticDeflection: 0.1, noseTipX: 6.0, bellyZ: 0.8, roofZ: -0.85, tailStrikeX: -5.6, tailStrikeZ: 0.45,
     finX: -7.0, finTopZ: -2.6, stabX: -6.8, stabZ: -2.5, wingTipX: -0.4, wingZ: 0.55, noseWheelRadius: 0.25, mainWheelRadius: 0.33 },
   engine: { type: 'turboprop', maxPower: 634000, thermoPower: 760000, propDiameter: 2.5, propRPM: 2000, idleNg: 58, bsfc: 0.93e-7, autoFeather: true, propEfficiency: 0.82, torqueReaction: 0.05 },

@@ -12,7 +12,7 @@ export class TouchControls {
    */
   constructor(root, input, cmd, actions, opts = {}) {
     this.input = input; this.cmd = cmd; this.actions = actions;
-    this.invertPitch = !!opts.invertPitch;
+    this.invertPitch = !!opts.invertPitch; this.ac = opts.ac ?? null;
     this.held = { brake: false, trimUp: false, trimDown: false };
     this.el = h('div', { class: 'touch', id: 'touch-controls' });
     root.append(this.el);
@@ -107,7 +107,16 @@ export class TouchControls {
       this.tapButton('PANEL', 'Zoom on the instrument panel', () => this.actions.instruments()),
       this.tapButton('HUD', 'Show or hide the flight data panel', () => this.actions.hud()),
       this.tapButton('❚❚', 'Pause / menu', () => this.actions.pause()));
-    this.el.append(h('div', { class: 'ttop' }, grid, h('div', { class: 'tflaps' }, 'FLAPS ', this.flapLabel)));
+    // Transport controls only where the aircraft has them.
+    const ac = this.ac, extra = [];
+    if (ac?.cfg.gear.retractable) extra.push(this.tapButton('GEAR', 'Landing gear up/down', () => this.cmd.gear(), 'gear'));
+    if (ac?.cfg.aero.spoilers) extra.push(this.tapButton('SPD BRK', 'Speed brake extend/retract', () => this.cmd.setSpeedbrake(ac.controls.speedbrake > 0 ? 0 : 1)));
+    if (ac && !ac.isPiston) extra.push(this.tapButton('REV', 'Reverse thrust (on ground at idle)', () => this.cmd.reverse()));
+    if (ac && ac.cfg.autopilot) extra.push(this.tapButton('AP', 'Autopilot on/off', () => this.cmd.apToggle(), 'ap'));
+    if (ac?.cfg.autopilot?.at) extra.push(this.tapButton('A/THR', 'Autothrottle on/off', () => this.cmd.atToggle()));
+    for (const b of extra) grid.append(b);
+    this.state = h('span', { class: 'tval' }, '');
+    this.el.append(h('div', { class: 'ttop' }, grid, h('div', { class: 'tflaps' }, 'FLAPS ', this.flapLabel, ' ', this.state)));
   }
 
   /** Per-frame: continuous trim, brake state, throttle readout. */
@@ -119,7 +128,9 @@ export class TouchControls {
     this.thr.fill.style.height = `${t * 100}%`;
     this.thr.handle.style.bottom = `calc(${t * 100}% - 14px)`;
     this.thr.label.textContent = `THR ${Math.round(t * 100)}%`;
-    this.flapLabel.textContent = `${Math.round(ac.flapDeg)}°${ac.controls.parkingBrake ? ' · PARK' : ''}`;
+    const fl = ac.cfg.aero.flaps[ac.controls.flapsLever]?.label;
+    this.flapLabel.textContent = `${ac.isPiston ? Math.round(ac.flapDeg) + '°' : fl}${ac.controls.parkingBrake ? ' · PARK' : ''}`;
+    if (this.state) this.state.textContent = [ac.cfg.gear.retractable ? (ac.gearPos > 0.98 ? 'GEAR DN' : ac.gearPos < 0.02 ? 'GEAR UP' : 'GEAR ⇅') : '', ac.controls.reverse ? 'REV' : '', ac.spoilerPos > 0.05 ? 'SPD BRK' : '', ac.autopilot?.engaged ? 'AP' : '', ac.autopilot?.atEngaged ? 'A/THR' : ''].filter(Boolean).join(' · ');
   }
 
   setVisible(v) { this.el.hidden = !v; }

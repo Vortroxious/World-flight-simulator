@@ -14,13 +14,13 @@ import { Menu } from '../ui/menu.js';
 import { Flight } from './flight.js';
 import { SIM_DT } from '../sim/aircraft.js';
 import { loadSettings, saveSettings, GRAPHICS } from './settings.js';
-import ga172 from '../aircraft/ga172/config.json';
+import { AIRCRAFT } from '../aircraft/index.js';
 
 export class App {
   constructor(canvas, ui) {
     this.canvas = canvas; this.ui = ui;
     this.settings = loadSettings();
-    this.aircraft = { ga172 };
+    this.aircraft = AIRCRAFT;
     this.flight = null;
     this.stats = { originShifts: 0 };
     this.fps = 60; this.frameMs = 16;
@@ -99,6 +99,7 @@ export class App {
   }
 
   async startFlight(settings) {
+    if (this.flight) this.endFlight(false); // never leave a previous session in the scene
     this.settings = settings; saveSettings(settings);
     this.applyGraphics();
     this.menu.hide();

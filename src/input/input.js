@@ -12,8 +12,14 @@ export const DEFAULT_BINDINGS = {
   brakes: ['Period', 'KeyB'], parkingBrake: ['Ctrl+Period', 'Shift+KeyB'],
   magnetosUp: ['Shift+KeyE'], magnetosDown: ['Ctrl+KeyE'], starter: ['KeyE'],
   view: ['KeyV'], cockpitView: ['KeyC'], instrumentView: ['KeyI'], hud: ['KeyH'], debug: ['Backquote', 'F9'], pause: ['KeyP'], restart: ['Ctrl+KeyR'],
-  menu: ['Escape'], mouseYoke: ['KeyY'], lookBack: ['Numpad2'], resetView: ['Numpad5'], sound: ['Ctrl+KeyS'], dgSync: ['Shift+KeyD'], directTo: ['KeyG'],
+  menu: ['Escape'], mouseYoke: ['KeyY'], lookBack: ['Numpad2'], resetView: ['Numpad5'], sound: ['Ctrl+KeyS'], dgSync: ['Shift+KeyD'], directTo: ['Shift+KeyG'],
   timeAccel: ['KeyT'], landingLight: ['Ctrl+KeyL'], strobe: ['KeyO'], master: ['Ctrl+KeyM'],
+  // Transport / jet controls
+  gear: ['KeyG'], speedbrake: ['Slash'], armSpoilers: ['Shift+Slash'], reverse: ['KeyR'], propUp: ['Shift+PageUp'], propDown: ['Shift+PageDown'],
+  autoStart: ['Ctrl+Shift+KeyE'], masterReset: ['Shift+KeyQ'],
+  // Autopilot / autothrottle (Shift+key; Ctrl+letter combinations are reserved by browsers)
+  apToggle: ['Shift+KeyZ'], atToggle: ['Shift+KeyR'], apHdg: ['Shift+KeyH'], apNav: ['Shift+KeyN'], apApp: ['Shift+KeyA'], apAlt: ['Shift+KeyL'], apVs: ['Shift+KeyV'], apFlc: ['Shift+KeyF'],
+  hdgUp: ['Shift+ArrowRight'], hdgDown: ['Shift+ArrowLeft'], altUp: ['Shift+ArrowUp'], altDown: ['Shift+ArrowDown'], spdUp: ['Ctrl+ArrowUp'], spdDown: ['Ctrl+ArrowDown'], vsUp: ['Ctrl+Shift+ArrowUp'], vsDown: ['Ctrl+Shift+ArrowDown'],
 };
 
 const keyId = (e) => `${e.ctrlKey ? 'Ctrl+' : ''}${e.shiftKey ? 'Shift+' : ''}${e.altKey ? 'Alt+' : ''}${e.code}`;

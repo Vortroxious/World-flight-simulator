@@ -4,7 +4,7 @@ import { defineAircraft } from '../builder.js';
 export default defineAircraft({
   id: 'a320', name: 'NB-320 Meridian', class: 'A320-class narrowbody twinjet, fly-by-wire sidestick (normal law with protections)', category: 'transport', family: 'narrowbody',
   mass: { empty: 42600, maxTakeoff: 78000, crewDefault: 400, payloadDefault: 13500 },
-  geometry: { wingArea: 122.6, span: 35.8, chord: 4.29, length: 37.57, fuselageDia: 3.95, dihedralDeg: 5.1, sweepDeg: 25, stabSpan: 12.45, eyePoint: [16.0, -0.55, -0.9] },
+  geometry: { wingArea: 122.6, span: 35.8, chord: 4.29, length: 37.57, fuselageDia: 3.95, dihedralDeg: 5.1, sweepDeg: 25, stabSpan: 12.45, eyePoint: [14.1, -0.55, -0.9] },
   layout: { noseX: 12.6, mainX: -0.9, mainY: 3.8, cgHeight: 3.7, noseTipX: 17.0, bellyZ: 1.98, roofZ: -1.98, tailStrikeX: -12, tailStrikeZ: 1.35, finX: -19, finTopZ: -8.0, stabX: -17.5, stabZ: -0.5, wingTipX: -4.5, wingZ: 1.5 },
   engine: { type: 'turbofan', maxThrust: 120000, idleN1: 21, idleN2: 60, tsfc: 1.0e-5, densityLapse: 0.8, machLapse: 0.5, reverser: { efficiency: 0.45 }, inletArea: 2.6 },
   engines: [{ position: [3.0, -5.75, 2.1], thrustAxis: [1, 0, 0], nacelleRadius: 1.05 }, { position: [3.0, 5.75, 2.1], thrustAxis: [1, 0, 0], nacelleRadius: 1.05 }],

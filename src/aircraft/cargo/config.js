@@ -4,7 +4,7 @@ import { defineAircraft } from '../builder.js';
 export default defineAircraft({
   id: 'cargo', name: 'CT-130 Packhorse', class: 'C-130-class four-engine turboprop cargo transport, high wing, rear ramp', category: 'cargo', family: 'cargo',
   mass: { empty: 34400, maxTakeoff: 70300, crewDefault: 400, payloadDefault: 12000 },
-  geometry: { wingArea: 162.1, span: 40.41, chord: 4.16, length: 29.79, fuselageDia: 4.3, dihedralDeg: 2.5, stabSpan: 15.7, eyePoint: [11.9, -0.65, -1.2] },
+  geometry: { wingArea: 162.1, span: 40.41, chord: 4.16, length: 29.79, fuselageDia: 4.3, dihedralDeg: 2.5, stabSpan: 15.7, eyePoint: [11.1, -0.65, -1.2] },
   layout: { noseX: 9.7, mainX: -0.5, mainY: 2.2, cgHeight: 3.05, staticDeflection: 0.12, noseTipX: 13.5, bellyZ: 2.15, roofZ: -2.15, tailStrikeX: -8, tailStrikeZ: 1.6, finX: -15.8, finTopZ: -8.6, stabX: -14.5, stabZ: -1.0, wingTipX: -0.5, wingZ: -2.4 },
   engine: { type: 'turboprop', maxPower: 3424000, thermoPower: 3800000, propDiameter: 4.11, propRPM: 1020, idleNg: 70, bsfc: 0.85e-7, autoFeather: true, propEfficiency: 0.8, torqueReaction: 0.03 },
   engines: [

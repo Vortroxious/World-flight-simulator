@@ -183,6 +183,15 @@ export class ParametricModel {
     const cargo = t === 'cargo-4prop', turboprop = t === 'twin-turboprop', wide = c.model?.variant === 'widebody';
     const lNose = R * (cargo ? 2.2 : turboprop ? 3.4 : wide ? 3.0 : 3.3), lTail = R * (cargo ? 5.0 : turboprop ? 6.5 : 5.6);
     const n = cargo ? 2.5 : turboprop ? 2.15 : 2.0;
+    // Crown line of the nose: full height aft of the flight deck, windshield top ~0.3 m above the pilots' eyes,
+    // sill ~0.25 m below them, then a steep drop to the radome (so the nose stays below the glareshield view).
+    const ep = c.geometry.eyePoint, eyeX = ep?.[0] ?? xNose - lNose * 0.6, eyeY = ep ? -ep[2] : yc + R * 0.4;
+    const ctrl = [[xNose, yc + R * (cargo ? 0.05 : -0.15)], [eyeX + (cargo ? 1.5 : 1.25), eyeY - (cargo ? 0.35 : 0.25)], [eyeX + 0.45, eyeY + 0.32], [eyeX - 1.2, yc + R]];
+    const crown = (x) => {
+      if (x >= ctrl[0][0]) return ctrl[0][1];
+      for (let i = 1; i < ctrl.length; i++) if (x >= ctrl[i][0]) { const [x0, y0] = ctrl[i - 1], [x1, y1] = ctrl[i], t = (x0 - x) / (x0 - x1); const u = t * t * (3 - 2 * t); return y0 + (y1 - y0) * u; }
+      return yc + R;
+    };
     const secs = [];
     const step = Math.max(0.25, g.length / 120);
     for (let x = xNose; x >= xTail - 1e-6; x -= xNose - x < lNose * 1.05 ? Math.min(step, 0.1 + R * 0.03) : step) {
@@ -191,7 +200,8 @@ export class ParametricModel {
       if (fromNose < lNose) {
         const s = fromNose / lNose, e = Math.sqrt(1 - (1 - s) ** 2.2);
         hw = R * Math.max(e, 0.04); const droop = (cargo ? 0.1 : 0.28) * R * (1 - s) ** 1.5;
-        top = yc - droop + R * Math.max(e, 0.04) * (turboprop || cargo ? 1 : 0.98); bot = yc - droop - R * Math.max(e, 0.04);
+        top = Math.min(yc - droop + R * Math.max(e, 0.04), crown(x)); bot = yc - droop - R * Math.max(e, 0.04);
+        if (top < bot + 0.05) top = bot + 0.05;
       } else if (toTail < lTail) {
         const s = 1 - toTail / lTail;
         hw = R * (1 - 0.9 * s ** 1.4);
@@ -213,10 +223,15 @@ export class ParametricModel {
     };
     this.mesh(loft(secs, colorAt, 36), this.part('fuselage'));
     // Flight-deck windows: front panes wrap over the nose, side panes further aft (posts left in livery colour).
-    const xw0 = xNose - lNose * (cargo ? 0.35 : 0.5), xw1 = xNose - lNose * (cargo ? 0.95 : 0.98), xFront = xNose - lNose * (cargo ? 0.62 : 0.72);
-    const aTop = (x) => (x > xFront ? 0.1 : cargo ? 0.35 : 0.78), aBot = () => (cargo ? 1.4 : turboprop ? 1.3 : 1.28);
-    this.mesh(shellPatch(secs, xw0, xFront - 0.02, aTop, aBot, COL.glass), this.parts.fuselage, this.matDS);
-    this.mesh(shellPatch(secs, xFront + (xw1 - xFront) * 0.08, xw1, aTop, aBot, COL.glass), this.parts.fuselage, this.matDS);
+    // Windshield anchored to the pilots' eye point: front panes ahead of the eye, side windows abeam it.
+    const ex = c.geometry.eyePoint?.[0] ?? xNose - lNose * 0.7;
+    const xw0 = Math.min(xNose - 0.4, ex + (cargo ? 1.3 : turboprop ? 1.0 : 1.15)), xFront = ex + (cargo ? 0.55 : 0.45), xw1 = ex - (cargo ? 0.9 : turboprop ? 0.6 : 0.8);
+    const aTop = (x) => (x > xFront ? 0.1 : cargo ? 0.35 : 0.78), aBot = (x) => (x > xFront ? (cargo ? 1.7 : 1.62) : cargo ? 1.45 : 1.38);
+    this.windshield = [
+      this.mesh(shellPatch(secs, xw0, xFront - 0.02, aTop, aBot, COL.glass), this.parts.fuselage, this.matDS),
+      this.mesh(shellPatch(secs, xFront + (xw1 - xFront) * 0.08, xw1, aTop, aBot, COL.glass), this.parts.fuselage, this.matDS),
+    ];
+    this.deck = { secs, xw0, xw1, xFront, aTop, aBot, xNose, R, yc };
     // Cabin windows: instanced dark panes on the fuselage sides (one row; widebodies get larger panes).
     if (!cargo) {
       const wy = R * (turboprop ? 0.2 : 0.24), wh = turboprop ? 0.42 : wide ? 0.42 : 0.34, ww = turboprop ? 0.38 : wide ? 0.3 : 0.24;
@@ -578,6 +593,42 @@ export class ParametricModel {
     this.exterior.add(this.landingLight, this.landingLight.target);
   }
 
+  /**
+   * Inward-facing flight-deck lining (nose to a few metres aft of the eye) with the windshield openings cut
+   * out, so the cockpit view looks out through real window apertures. Null for the fighter (open canopy).
+   */
+  flightDeckShell(eyeX) {
+    const dk = this.deck; if (!dk) return null;
+    const ring = 64, x0 = dk.xNose - 0.05, x1 = Math.min(eyeX - 3.5, dk.xw1 - 1.5);
+    const secs = dk.secs.filter((q) => q.x <= x0 && q.x >= x1);
+    const pos = [], col = [], idx = [];
+    for (const q of secs) for (let k = 0; k <= ring; k++) {
+      const a = (k / ring) * Math.PI * 2, [px, py] = ringAt(q, a, -0.04);
+      pos.push(px, py, -q.x);
+      const yy = py - dk.yc;
+      col.push(...(yy < -dk.R * 0.35 ? [0.2, 0.21, 0.22] : yy > dk.R * 0.75 ? [0.62, 0.63, 0.64] : [0.48, 0.5, 0.52]));
+    }
+    const W = ring + 1;
+    const isGlass = (x, a) => {
+      const aa = a > Math.PI ? Math.PI * 2 - a : a; // mirror to the right side, 0 = top
+      if (x > dk.xw0 || x < dk.xw1) return false;
+      if (Math.abs(x - dk.xFront) < 0.05) return false; // window post
+      return aa >= dk.aTop(x) + 0.03 && aa <= dk.aBot(x) - 0.03;
+    };
+    for (let i = 0; i < secs.length - 1; i++) for (let k = 0; k < ring; k++) {
+      const xm = (secs[i].x + secs[i + 1].x) / 2, am = ((k + 0.5) / ring) * Math.PI * 2;
+      if (isGlass(xm, am)) continue;
+      const a = i * W + k, b = a + 1, c = a + W, d = c + 1;
+      idx.push(a, b, c, b, d, c);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.05 }));
+    m.receiveShadow = true;
+    return m;
+  }
+
   /** Model-space position of engine i (fire/smoke emitters). */
   engineAnchor(i = 0) { return (this.anchors[i] ?? new THREE.Vector3()).clone(); }
 
@@ -644,6 +695,7 @@ export class ParametricModel {
     for (const s of this.strobes) s.visible = strobeOn;
     this.landingLight.intensity = powered && sw.landingLight ? 90000 : powered && sw.taxiLight ? 20000 : 0;
     if (this.canopy) this.canopy.visible = !cockpitView;
+    if (this.windshield) for (const w of this.windshield) w.visible = !cockpitView;
     for (const [name, det] of Object.entries(ac.damage?.detached ?? {})) if (det && this.parts[name] && this.parts[name].visible) this.parts[name].visible = false;
   }
 }

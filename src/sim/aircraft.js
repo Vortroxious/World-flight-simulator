@@ -342,7 +342,8 @@ export class Aircraft {
     // Spoilers / speedbrakes: manual lever plus ground spoilers (armed, on ground, idle or reverse).
     const sp = c.aero.spoilers;
     const idle = (k.throttles ? Math.max(...k.throttles) : k.throttle) < 0.08;
-    const groundSpoilers = sp && mainsOnGround && ((k.spoilersArmed && idle) || k.reverse > 0.05);
+    // Ground spoilers: armed + idle with the wheels spun up (> ~60 kt), or reverse selected.
+    const groundSpoilers = sp && mainsOnGround && ((k.spoilersArmed && idle && Math.hypot(this.v[0], this.v[1]) > 30) || k.reverse > 0.05);
     const spTarget = sp ? (groundSpoilers ? 1 : clamp(k.speedbrake, 0, 1)) : 0;
     this.spoilerPos = moveToward(this.spoilerPos, spTarget * (sp ? Math.min(1, hydAvail + 0.2) : 0), dt / 1.0);
     const gnd = !!groundSpoilers && this.spoilerPos > 0.1;

@@ -19,6 +19,13 @@ export class CameraRig {
     this.shake = 0;
   }
 
+  /** Scale external views to the aircraft (a fighter and a widebody need very different chase distances). */
+  setSize(cfg) {
+    const g = cfg.geometry, size = Math.max(g.span, g.length);
+    this.chase = { back: Math.max(16, size * 0.95 + 4), up: Math.max(4.5, size * 0.2 + 1.5) };
+    this.orbit.dist = Math.max(22, size * 1.25);
+  }
+
   setMode(m) { this.mode = m; this.chasePos = null; if (m !== 'cockpit') this.instrumentView = false; }
   next() { this.setMode(VIEWS[(VIEWS.indexOf(this.mode) + 1) % VIEWS.length]); }
   get isCockpit() { return this.mode === 'cockpit'; }
@@ -69,7 +76,7 @@ export class CameraRig {
     } else if (this.mode === 'chase') {
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(rq);
       fwd.addScaledVector(up, -fwd.dot(up)).normalize();
-      const target = pos.clone().addScaledVector(fwd, -16).addScaledVector(up, 4.5);
+      const target = pos.clone().addScaledVector(fwd, -(this.chase?.back ?? 16)).addScaledVector(up, this.chase?.up ?? 4.5);
       if (!this.chasePos) this.chasePos = target.clone();
       this.chasePos.lerp(target, 1 - Math.exp(-dt * 4));
       cam.position.copy(this.chasePos);

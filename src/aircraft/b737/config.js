@@ -4,7 +4,7 @@ import { defineAircraft } from '../builder.js';
 export default defineAircraft({
   id: 'b737', name: 'NB-738 Cascade', class: '737-800-class narrowbody twinjet, conventional yoke and stabiliser trim', category: 'transport', family: 'narrowbody',
   mass: { empty: 41400, maxTakeoff: 79000, crewDefault: 400, payloadDefault: 14000 },
-  geometry: { wingArea: 124.6, span: 35.79, chord: 3.96, length: 39.5, fuselageDia: 3.76, dihedralDeg: 6, sweepDeg: 25, stabSpan: 14.4, eyePoint: [16.8, -0.55, -0.85] },
+  geometry: { wingArea: 124.6, span: 35.79, chord: 3.96, length: 39.5, fuselageDia: 3.76, dihedralDeg: 6, sweepDeg: 25, stabSpan: 14.4, eyePoint: [15.8, -0.55, -0.85] },
   layout: { noseX: 15.6, mainX: -0.8, mainY: 2.86, cgHeight: 3.76, noseTipX: 18.5, bellyZ: 1.88, roofZ: -1.88, tailStrikeX: -13.5, tailStrikeZ: 1.3, finX: -20, finTopZ: -8.7, stabX: -18.5, stabZ: -0.4, wingTipX: -3.9, wingZ: 1.6 },
   engine: { type: 'turbofan', maxThrust: 121000, idleN1: 20, idleN2: 59, tsfc: 1.0e-5, densityLapse: 0.8, machLapse: 0.5, reverser: { efficiency: 0.4 }, inletArea: 2.4 },
   engines: [{ position: [3.6, -4.9, 2.3], thrustAxis: [1, 0, 0], nacelleRadius: 1.0 }, { position: [3.6, 4.9, 2.3], thrustAxis: [1, 0, 0], nacelleRadius: 1.0 }],

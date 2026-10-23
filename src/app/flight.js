@@ -11,6 +11,8 @@ import { bodyToNed } from '../core/math.js';
 import { KT, NM } from '../core/units.js';
 import { createAircraftModel } from '../render/models/index.js';
 import { Cockpit } from '../cockpit/cockpit.js';
+import { GlassCockpit } from '../cockpit/glass/glass-cockpit.js';
+import { makeIls } from '../sim/nav/nav.js';
 import { CockpitInteraction } from '../cockpit/interaction.js';
 import { CameraRig } from '../render/cameras.js';
 import { Effects } from '../render/effects.js';
@@ -78,14 +80,18 @@ export class Flight {
       ac.inst.kollsman = this.weather.qnh;
       this.cmd = createCommands(ac, { onCommand: () => app.audio.click() });
       const env = this.env();
+      const nf = cfg.aero.flaps.length, transport = !!cfg.engines;
+      if (spawn.threshold) ac.nav.setIls(makeIls({ ident: ap.ident, runway: spawn.runway, threshold: spawn.threshold, heading: spawn.heading, length: spawn.length }));
       if (s.startMode === 'approach') {
-        ac.placeAirborne(start.lat, start.lon, start.alt, spawn.heading, cfg.limits.Vref, { flapsLever: 2, flightPathDeg: -3, atmo: this.weather.atmosphereConditions });
+        ac.placeAirborne(start.lat, start.lon, start.alt, spawn.heading, cfg.limits.Vref + (transport ? 5 : 0), { flapsLever: transport ? nf - 1 : 2, gearDown: true, flightPathDeg: -3, atmo: this.weather.atmosphereConditions });
         ac.elec.switches.landingLight = ac.elec.switches.navLights = ac.elec.switches.strobe = ac.elec.switches.beacon = true;
-        ac.controls.throttle *= 0.75; // descending on the glidepath
+        if (ac.isPiston) ac.controls.throttle *= 0.75; // descending on the glidepath
+        if (transport) { ac.controls.spoilersArmed = !!cfg.aero.spoilers; Object.assign(ac.autopilot.sel, { spd: cfg.limits.Vref + 5, alt: Math.round(start.alt / 0.3048 / 100) * 100 + 2000, hdg: Math.round(wrap360(spawn.heading - ac.magvar)) }); }
         ac.step(1 / 240, env);
       } else {
         ac.placeOnGround(spawn.lat, spawn.lon, spawn.heading, env.ground);
         if (s.coldDark) ac.setColdAndDark(); else ac.setReadyState();
+        if (!s.coldDark && transport) { ac.controls.flapsLever = cfg.limits.takeoffFlap ?? 0; ac.flapDeg = cfg.aero.flaps[ac.controls.flapsLever].deg; ac.controls.spoilersArmed = !!cfg.aero.spoilers; ac.autopilot.sel.hdg = Math.round(wrap360(spawn.heading - ac.magvar)); }
         if (s.startMode === 'runway' && !s.coldDark) ac.controls.parkingBrake = false;
         if (s.startMode === 'runway' && !s.coldDark) ac.setBrakesHeld = true;
       }
@@ -96,11 +102,12 @@ export class Flight {
       this.model = createAircraftModel(ac.cfg);
       app.scene.add(this.model.root);
       this.model.root.matrixAutoUpdate = false;
-      this.cockpit = new Cockpit(ac, this.cmd);
+      this.cockpit = cfg.cockpit?.type ? new GlassCockpit(ac, this.cmd, { model: this.model, provider: this.navProvider() }) : new Cockpit(ac, this.cmd);
       this.model.root.add(this.cockpit.root);
       this.cockpit.onDirectTo = () => this.directTo();
       this.rig = new CameraRig(app.camera);
       this.rig.eye.set(cfg.geometry.eyePoint[1], -cfg.geometry.eyePoint[2], -cfg.geometry.eyePoint[0]);
+      this.rig.setSize(cfg);
       this.effects = new Effects(app.scene, app.origin, app.ground);
       this.recorder = new Recorder(30, 30);
       ac.damage.onEvent = (ev) => this.onDamageEvent(ev);
@@ -117,7 +124,7 @@ export class Flight {
           instruments: () => this.rig.toggleInstrumentView(),
           hud: () => { this.hud.setVisible(!this.hud.visible); this.s.hud = this.hud.visible; },
           pause: () => this.togglePause(),
-        }, { invertPitch: s.touchInvertPitch });
+        }, { invertPitch: s.touchInvertPitch, ac });
         document.body.classList.add('touch-on');
       }
       this.interaction = new CockpitInteraction(app.canvas, app.camera, this.rig, this.hud.tooltip);
@@ -131,9 +138,11 @@ export class Flight {
     }
     const tower = this.spawn ? this.airport.spawnPoints().find((p) => p.type === 'parking') : null;
     this.towerLL = tower || this.spawn;
-    this.hud.toast(this.s.coldDark ? 'Cold & dark: see Controls tab for the start procedure'
-      : this.touchEnabled ? 'Slide THR up to full · at ~55 kt drag the stick down to rotate · drag in the cockpit to look around'
-      : 'Full throttle: F4 or PageUp · rotate ~55 kt with ↓ (or S) · V cycles views', 5000);
+    const vr = this.ac.cfg.limits.Vr;
+    this.hud.toast(this.s.coldDark ? (this.ac.isPiston ? 'Cold & dark: see Controls tab for the start procedure' : 'Cold & dark: Ctrl+Shift+E runs the automatic start sequence (or use the overhead panel)')
+      : this.s.startMode === 'approach' ? `Established on final, ILS ${this.spawn.runway} tuned · Shift+Z autopilot, Shift+A approach · G gear`
+      : this.touchEnabled ? `Slide THR up to full · at ~${vr} kt drag the stick down to rotate · drag in the cockpit to look around`
+      : `Full throttle: F4 or PageUp · rotate ~${vr} kt with ↓ (or S)${this.ac.cfg.gear.retractable ? ' · G gear up after liftoff' : ''} · V cycles views`, 5000);
   }
 
   env() {
@@ -152,6 +161,23 @@ export class Flight {
     on('landingLight', () => c.toggleSwitch('landingLight')); on('strobe', () => c.toggleSwitch('strobe'));
     on('dgSync', () => { c.dgSync(); this.hud.toast('Heading indicator synced to compass'); });
     on('directTo', () => this.directTo());
+    on('gear', () => { if (!ac.cfg.gear.retractable) return; c.gear(); this.hud.toast(ac.onGround && !ac.controls.gearDown ? 'Gear' : ac.onGround ? 'Gear lever locked on the ground' : `Gear ${ac.controls.gearDown ? 'DOWN' : 'UP'}`); });
+    on('speedbrake', () => { if (!ac.cfg.aero.spoilers) return; c.setSpeedbrake(ac.controls.speedbrake > 0 ? 0 : 1); this.hud.toast(`Speed brake ${ac.controls.speedbrake > 0 ? 'EXTENDED' : 'RETRACTED'}`); });
+    on('armSpoilers', () => { if (!ac.cfg.aero.spoilers) return; c.armSpoilers(); this.hud.toast(`Ground spoilers ${ac.controls.spoilersArmed ? 'ARMED' : 'DISARMED'}`); });
+    on('reverse', () => { if (ac.isPiston) return; c.reverse(); this.hud.toast(ac.controls.reverse ? 'REVERSE thrust' : ac.onGround ? 'Reverse stowed' : 'Reverse only on the ground at idle'); });
+    on('propUp', () => c.prop(0.1)); on('propDown', () => c.prop(-0.1));
+    on('apToggle', () => { c.apToggle(); this.hud.toast(ac.autopilot.engaged ? `AP ON (${ac.autopilot.lat}/${ac.autopilot.vert})` : ac.onGround ? 'AP cannot engage on the ground' : 'AP OFF'); });
+    on('atToggle', () => { if (!ac.autopilot.cfg.at) { this.hud.toast('No autothrottle on this aircraft'); return; } c.atToggle(); this.hud.toast(`A/THR ${ac.autopilot.atEngaged ? 'ON' : 'OFF'}`); });
+    on('apHdg', () => { c.apLateral('HDG'); this.hud.toast(`AP lateral: ${ac.autopilot.lat}`); });
+    on('apNav', () => { c.apLateral('NAV'); this.hud.toast(ac.nav.dto ? `NAV ${ac.autopilot.latArm || ac.autopilot.lat}` : 'NAV: set a Direct-To first (Shift+G or CDU DIR)'); });
+    on('apApp', () => { c.apLateral('APP'); this.hud.toast(ac.nav.ils ? `APPR ${ac.autopilot.latArm === 'LOC' ? 'armed' : 'off'} (${ac.nav.ils.ident})` : 'No ILS tuned (CDU APPR page)'); });
+    on('apAlt', () => { c.apVertical('ALT'); this.hud.toast(`AP vertical: ${ac.autopilot.vert} ${ac.autopilot.sel.alt} ft`); });
+    on('apVs', () => { c.apVertical('VS'); this.hud.toast(`AP V/S ${ac.autopilot.sel.vs} fpm`); });
+    on('apFlc', () => { c.apVertical('FLC'); this.hud.toast(ac.autopilot.cfg.flc ? `AP FLC ${ac.autopilot.sel.spd} kt → ${ac.autopilot.sel.alt} ft` : 'No FLC on this autopilot'); });
+    const bug = (field, d, label) => on(field + (d > 0 ? 'Up' : 'Down'), () => { c.apBump(field, d); this.hud.toast(`${label} ${ac.autopilot.sel[field]}`, 900); });
+    bug('hdg', 1, 'HDG'); bug('hdg', -1, 'HDG'); bug('alt', 100, 'ALT'); bug('alt', -100, 'ALT'); bug('spd', 1, 'SPD'); bug('spd', -1, 'SPD'); bug('vs', 100, 'V/S'); bug('vs', -100, 'V/S');
+    on('masterReset', () => c.masterReset());
+    on('autoStart', () => this.startAutoStart());
     i.on('view', () => { this.rig.next(); this.hud.toast(`View: ${this.rig.mode}`); });
     i.on('cockpitView', () => this.rig.setMode('cockpit'));
     i.on('instrumentView', () => this.rig.toggleInstrumentView());
@@ -175,14 +201,51 @@ export class Flight {
     else { this.pauseEl?.remove(); this.pauseEl = null; }
   }
 
-  directTo() {
+  directTo(pick) {
     const s = this.ac.snapshot();
-    const near = this.app.db.nearest(s.lat, s.lon, 3).filter((a) => a.dist > 2500);
-    const pick = near[0];
+    pick ??= this.app.db.nearest(s.lat, s.lon, 3).filter((a) => a.dist > 2500)[0];
     if (!pick) return;
     this.nav = { mode: 'DTO', targetIdent: pick.ident, target: null };
+    this.ac.nav.directTo({ ident: pick.ident, lat: pick.lat, lon: pick.lon }, this.ac);
     this.updateNav();
     this.hud.toast(`Direct-To ${pick.ident} ${pick.name}`);
+  }
+
+  /** Data source for the CDU and ND: nearby airports, runways (for synthetic ILS), direct-to and ILS tuning. */
+  navProvider() {
+    const app = this.app;
+    return {
+      nearest: (n = 5) => { const ac = this.ac; return ac ? app.db.nearest(ac.lat, ac.lon, n, (r) => r.type !== 'S' || n <= 2).map((r) => ({ ident: r.ident, name: r.name, lat: r.lat, lon: r.lon, dist: r.dist })) : []; },
+      directTo: (a) => this.directTo(a),
+      runways: async (ident) => {
+        const ap = await app.airports.ensure(ident, false).catch(() => null);
+        return ap ? ap.spawnPoints().filter((p) => p.type === 'runway' && p.threshold).sort((a, b) => b.length - a.length).map((p) => ({ runway: p.runway, course: p.heading, length: p.length, sp: p })) : [];
+      },
+      tuneIls: (ident, r) => this.ac.nav.setIls(makeIls({ ident, runway: r.runway, threshold: r.sp.threshold, heading: r.sp.heading, length: r.sp.length })),
+    };
+  }
+
+  /** Automatic turbine start sequence from cold & dark (battery, APU, engines one after another). */
+  startAutoStart() {
+    const ac = this.ac;
+    if (ac.isPiston || ac.engines.every((e) => e.running)) return;
+    this.autoStart = { step: 0, t: 0 };
+    this.hud.toast('Automatic start sequence…', 2500);
+  }
+  runAutoStart(dt) {
+    const a = this.autoStart, ac = this.ac, c = this.cmd; if (!a) return;
+    a.t += dt;
+    if (a.step === 0) { c.setSwitch('battery', true); c.setSwitch('alternator', true); c.setSwitch('avionics', true); c.setSwitch('beacon', true); c.setSwitch('navLights', true); ac.hyd.setAll(true); if (ac.apu.present) c.apu(true); a.step = 1; a.t = 0; return; }
+    if (a.step === 1 && (!ac.apu.present || ac.apu.available || a.t > 45)) { a.step = 2; a.i = 0; a.t = 0; return; }
+    if (a.step === 2) {
+      const e = ac.engines[a.i];
+      if (!e) { a.step = 3; return; }
+      if (!e.starter && !e.running) { c.engineStart(a.i, true); c.engineFuel(a.i, true); }
+      if (e.running && (e.n2 ?? e.ng ?? 0) > 50) { c.engineStart(a.i, false); a.i++; a.t = 0; }
+      else if (a.t > 90) { c.engineStart(a.i, false); this.hud.toast(`Engine ${a.i + 1} failed to start`); a.i++; a.t = 0; }
+      return;
+    }
+    if (a.step === 3) { if (ac.apu.present) c.apu(false); c.packs(true); this.autoStart = null; this.hud.toast('All engines running'); }
   }
 
   updateNav() {
@@ -286,6 +349,9 @@ export class Flight {
     this.stats.steps = steps;
     if (this.crashed && performance.now() - this.crashAt > (ac.damage.mode === DAMAGE_MODES.SIMPLIFIED ? 800 : 4500) && !this.replaying) this.showCrashReport();
 
+    this.runAutoStart(realDt);
+    // Speech: GPWS / altitude callouts
+    for (const phrase of ac.gpws?.drain?.() ?? []) app.audio.say(phrase);
     // Landing report
     if (ac.touchdown && ac.touchdown !== this._td) {
       this._td = ac.touchdown;

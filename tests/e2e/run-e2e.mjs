@@ -35,6 +35,8 @@ async function test(name, fn) {
 const assert = (c, msg) => { if (!c) throw new Error(msg); };
 const shot = (n) => page.screenshot({ path: path.join(OUT, n + '.png') });
 const sim = (fn, arg) => page.evaluate(fn, arg);
+const domClick = (sel) => page.$eval(sel, (e) => e.click());
+const innerHeightOf = (pg) => pg.viewportSize().height;
 
 console.log('World Flight Simulator — browser E2E');
 await test('app boots to the main menu without errors', async () => {
@@ -102,13 +104,15 @@ await test('mouse: clicking cockpit controls changes simulation state', async ()
     return true;
   });
   void target;
-  await page.waitForTimeout(800);
-  const pos = await sim(() => {
+  // wait until the rendered camera has settled (two projections 0.5 s apart agree; software GL is slow)
+  const project = () => sim(() => {
     const f = window.__sim.flight, cam = window.__sim.app.camera;
     const m = f.cockpit.switchMeshes.beacon; m.updateMatrixWorld(true);
     const v = m.getWorldPosition(m.position.clone()).project(cam);
     return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, before: window.__sim.ac.elec.switches.beacon };
   });
+  let pos = await project();
+  for (let i = 0; i < 40; i++) { await page.waitForTimeout(500); const n = await project(); const still = Math.hypot(n.x - pos.x, n.y - pos.y) < 1; pos = n; if (still && pos.y < innerHeightOf(page)) break; }
   await page.mouse.click(pos.x, pos.y);
   await page.waitForTimeout(300);
   const after = await sim(() => window.__sim.ac.elec.switches.beacon);
@@ -153,12 +157,12 @@ await test('crash into terrain -> damage telemetry -> crash report -> replay -> 
   assert(r.events > 0, 'damage events logged');
   await page.waitForSelector('#crash', { timeout: 30000 });
   await shot('06-crash-report');
-  await page.click('#btn-replay');
+  await domClick('#btn-replay');
   await page.waitForTimeout(2000);
   await shot('07-replay');
-  await page.click('.replaybar button');
+  await domClick('.replaybar button');
   await page.waitForSelector('#btn-restart');
-  await page.click('#btn-restart');
+  await domClick('#btn-restart');
   await page.waitForFunction(() => window.__sim?.ac && !window.__sim.flight.crashed && !document.getElementById('loading'), null, { timeout: 90000 });
   const s = await sim(() => window.__sim.state());
   assert(s.onGround && !(await sim(() => window.__sim.damage().destroyed)), 'restarted on the ground, undamaged');
@@ -175,7 +179,7 @@ await test('procedural airport (KOAK) approach start + return to menu', async ()
   await shot('08-koak-final');
   await page.keyboard.press('Escape');
   await page.waitForSelector('#pause');
-  await page.click('#pause button:nth-child(3)');
+  await domClick('#pause button:nth-child(3)');
   await page.waitForSelector('#menu', { state: 'visible' });
 });
 
@@ -216,13 +220,22 @@ await test('phone (touch, landscape): menu reachable, stick / throttle / flaps /
   await t('touchStart', 420, 120); await t('touchMove', 470, 125); await t('touchMove', 520, 130); await t('touchEnd');
   assert((await p.evaluate(() => window.__sim.flight.rig.look.yaw)) !== yaw0, 'one-finger drag looks around');
   // stop the aircraft (it has been rolling at full power) so the cockpit is steady for the tap
-  await p.evaluate(() => { const ac = window.__sim.ac; ac.controls.throttle = 0; ac.v = [0, 0, 0]; ac.w = [0, 0, 0]; ac.controls.parkingBrake = true; const r = window.__sim.flight.rig; r.look.yaw = 0.05; r.look.pitch = -0.35; });
+  await p.evaluate(() => {
+    const f = window.__sim.flight, ac = f.ac; ac.controls.throttle = 0; ac.controls.elevator = 0;
+    ac.placeOnGround(f.spawn.lat, f.spawn.lon, f.spawn.heading, f.app.ground); ac.setReadyState(); ac.controls.parkingBrake = true; // level, at rest
+    const r = f.rig; r.look.yaw = 0.05; r.look.pitch = -0.35;
+  });
   // wait until the rendered camera has settled (two projections 0.5 s apart agree)
   const project = () => p.evaluate(() => { const f = window.__sim.flight, cam = window.__sim.app.camera; const m = f.cockpit.switchMeshes.beacon; const v = m.getWorldPosition(m.position.clone()).project(cam); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, b: window.__sim.ac.elec.switches.beacon }; });
   let sw = await project();
-  for (let i = 0; i < 40; i++) { await p.waitForTimeout(500); const n = await project(); const still = Math.hypot(n.x - sw.x, n.y - sw.y) < 1; sw = n; if (still) break; }
+  for (let i = 0; i < 40; i++) { await p.waitForTimeout(500); const n = await project(); const still = Math.hypot(n.x - sw.x, n.y - sw.y) < 1; sw = n; if (still && sw.y > 0 && sw.y < 390) break; }
   await t('touchStart', sw.x, sw.y); await t('touchEnd');
-  assert((await p.evaluate(() => window.__sim.ac.elec.switches.beacon)) !== sw.b, 'tapping a cockpit switch toggles it');
+  const toggled = (await p.evaluate(() => window.__sim.ac.elec.switches.beacon)) !== sw.b;
+  if (!toggled) {
+    const under = await p.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return `${e?.tagName}.${e?.className}`; }, [sw.x, sw.y]);
+    await p.screenshot({ path: path.join(OUT, 'FAIL-phone-tap.png') });
+    throw new Error(`tapping a cockpit switch toggles it (tap at ${sw.x.toFixed(0)},${sw.y.toFixed(0)} on ${under})`);
+  }
   await p.screenshot({ path: path.join(OUT, '09-phone-landscape.png') });
   await ctx.close();
 });

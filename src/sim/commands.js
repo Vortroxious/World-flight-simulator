@@ -43,6 +43,46 @@ export function createCommands(ac, hooks = {}) {
     comSwap() { const a = ac.avionics; [a.com1, a.com1Stby] = [a.com1Stby, a.com1]; },
     xpdrDigit(i, d) { const c = ac.avionics.xpdrCode.split('').map(Number); c[i] = (c[i] + d + 8) % 8; ac.avionics.xpdrCode = c.join(''); },
     xpdrMode() { ac.avionics.xpdrMode = ac.avionics.xpdrMode === 'STBY' ? 'ALT' : 'STBY'; },
+
+    // ---- Transport / jet controls ----
+    gear(down) {
+      if (!ac.cfg.gear.retractable) return;
+      const v = down ?? !k.gearDown;
+      if (!v && ac.onGround) { fire('gearInhibit'); return; } // squat switch: no retraction on the ground
+      if (v !== k.gearDown) { k.gearDown = v; fire('gear', v); }
+    },
+    speedbrake(d) { k.speedbrake = clamp(k.speedbrake + d, 0, 1); if (d < 0 && k.speedbrake === 0) fire('speedbrake', 0); },
+    setSpeedbrake(v) { k.speedbrake = clamp(v, 0, 1); },
+    armSpoilers(v) { k.spoilersArmed = v ?? !k.spoilersArmed; fire('spoilersArm', k.spoilersArmed); },
+    /** Reverse thrust: only selectable at idle on the ground (lever interlock). */
+    reverse(on) {
+      const v = on ?? !(k.reverse > 0);
+      if (v && (k.throttle > 0.08 || !ac.onGround)) return;
+      k.reverse = v ? 1 : 0; fire('reverse', v);
+    },
+    setProp(v) { k.prop = clamp(v, 0, 1); },
+    prop(d) { cmd.setProp(k.prop + d); },
+    engineStart(i, on) { const e = ac.engines[i]; if (!e || e.kind === 'piston') return; e.starter = on ?? !e.starter; fire('starter', i); },
+    engineFuel(i, on) { const e = ac.engines[i]; if (!e || e.kind === 'piston') return; e.fuelOn = on ?? !e.fuelOn; fire('engineFuel', i); },
+    apu(on) { ac.apu.switch = on ?? !ac.apu.switch; fire('apu', ac.apu.switch); },
+    hydPumps(on) { const v = on ?? !ac.hyd.systems.every((h) => h.elecPump !== false && h.engPump !== false); ac.hyd.setAll(v); fire('hyd', v); },
+    packs(on) { ac.press.packs = on ?? !ac.press.packs; fire('packs', ac.press.packs); },
+    masterReset() { ac.masterWarning = false; ac.masterCaution = false; fire('masterReset'); },
+
+    // ---- Autopilot / autothrottle / flight director ----
+    apToggle() { const ap = ac.autopilot; if (ap.engaged) ap.disengage('manual'); else if (!ap.engage(ac)) fire('apInhibit'); fire('ap', ap.engaged); },
+    atToggle() { ac.autopilot.toggleAt(ac); fire('at', ac.autopilot.atEngaged); },
+    fdToggle() { ac.autopilot.fd = !ac.autopilot.fd; },
+    apLateral(mode) { ac.autopilot.setLateral(mode, ac); fire('apMode', mode); },
+    apVertical(mode) { ac.autopilot.setVertical(mode, ac); fire('apMode', mode); },
+    apBump(field, d) { ac.autopilot.bump(field, d); },
+    apSync(field) {
+      const s = ac.snapshot(), sel = ac.autopilot.sel;
+      if (field === 'hdg') sel.hdg = Math.round(s.headingMag);
+      if (field === 'alt') sel.alt = Math.round(s.alt / 0.3048 / 100) * 100;
+      if (field === 'spd') sel.spd = Math.round(s.ias / 0.514444);
+      if (field === 'vs') sel.vs = Math.round(s.vs / 0.3048 * 60 / 100) * 100;
+    },
   };
   return cmd;
 }

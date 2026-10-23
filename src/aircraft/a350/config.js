@@ -4,7 +4,7 @@ import { defineAircraft } from '../builder.js';
 export default defineAircraft({
   id: 'a350', name: 'WB-359 Aurora', class: 'A350-900-class widebody twinjet, fly-by-wire sidestick (normal law with protections)', category: 'transport', family: 'widebody',
   mass: { empty: 142400, maxTakeoff: 280000, crewDefault: 900, payloadDefault: 30000 },
-  geometry: { wingArea: 442, span: 64.75, chord: 8.0, length: 66.8, fuselageDia: 5.96, dihedralDeg: 5.5, sweepDeg: 31.9, stabSpan: 19, eyePoint: [30.4, -0.6, -1.35] },
+  geometry: { wingArea: 442, span: 64.75, chord: 8.0, length: 66.8, fuselageDia: 5.96, dihedralDeg: 5.5, sweepDeg: 31.9, stabSpan: 19, eyePoint: [27.3, -0.6, -1.35] },
   layout: { noseX: 27.5, mainX: -1.0, mainY: 5.3, cgHeight: 5.3, staticDeflection: 0.16, noseTipX: 31.0, bellyZ: 2.98, roofZ: -2.98, tailStrikeX: -22, tailStrikeZ: 1.3, finX: -34, finTopZ: -11.75, stabX: -32, stabZ: -0.5, wingTipX: -11, wingZ: 2.1, mainWheelRadius: 0.7 },
   engine: { type: 'turbofan', maxThrust: 374000, idleN1: 20, idleN2: 60, tsfc: 0.86e-5, densityLapse: 0.8, machLapse: 0.5, reverser: { efficiency: 0.35 }, inletArea: 7.0 },
   engines: [{ position: [6.5, -10.6, 2.7], thrustAxis: [1, 0, 0], nacelleRadius: 1.8 }, { position: [6.5, 10.6, 2.7], thrustAxis: [1, 0, 0], nacelleRadius: 1.8 }],
