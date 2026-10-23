@@ -9,7 +9,7 @@ import { DAMAGE_MODES } from '../sim/damage/damage.js';
 import { LocalFrame, distance, bearing, wrap360 } from '../geo/wgs84.js';
 import { bodyToNed } from '../core/math.js';
 import { KT, NM } from '../core/units.js';
-import { AircraftModel } from '../render/aircraft-model.js';
+import { createAircraftModel } from '../render/models/index.js';
 import { Cockpit } from '../cockpit/cockpit.js';
 import { CockpitInteraction } from '../cockpit/interaction.js';
 import { CameraRig } from '../render/cameras.js';
@@ -93,7 +93,7 @@ export class Flight {
       L.step(`Aircraft ${cfg.name} placed (${s.coldDark ? 'cold & dark' : 'engine running'})`, 0.88);
 
       // Visuals
-      this.model = new AircraftModel();
+      this.model = createAircraftModel(ac.cfg);
       app.scene.add(this.model.root);
       this.model.root.matrixAutoUpdate = false;
       this.cockpit = new Cockpit(ac, this.cmd);
@@ -209,7 +209,11 @@ export class Flight {
     if (ev.type === 'destroyed' || ev.type === 'ditched') this.onCrash();
   }
 
-  engineWorld() { return new THREE.Vector3(0, 0.2, -1.6).applyMatrix4(this.model.root.matrix); }
+  engineWorld() {
+    const burning = this.ac.engines.findIndex((e) => e.failed || e.health < 0.5);
+    const p = this.model.engineAnchor ? this.model.engineAnchor(Math.max(0, burning)) : new THREE.Vector3(0, 0.2, -1.6);
+    return p.applyMatrix4(this.model.root.matrix);
+  }
 
   velocityThree() {
     const v = this.ac.v; // NED

@@ -79,6 +79,7 @@ export function defineAircraft(p) {
     id: p.id, name: p.name, class: p.class, category: p.category, family: p.family, fidelity: p.fidelity ?? 'Coefficient-based 6-DOF model from public dimensions and performance figures; not certified data.',
     mass: { ...m, inertiaAtMtow: m.inertiaAtMtow ?? estimateInertia(m.maxTakeoff, g.span, g.length, p.inertiaShape) },
     geometry: { ...g },
+    layout: { ...L },
     aero: { ...TRANSPORT_DERIVS, ...p.aero },
     controls: { keyboardRate: 1.6, keyboardReturnRate: 2.5, trimRatePerSec: 0.08, ...p.controls },
     engines,
