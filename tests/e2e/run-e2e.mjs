@@ -189,6 +189,63 @@ await test('no uncaught errors during the session', async () => {
   assert(pageErrors.length === 0, pageErrors.join(' | '));
 });
 
+await test('airliner (A320 class): picker, glass cockpit, interlocks, CDU direct-to, ILS autoland at KSFO', async () => {
+  await page.waitForSelector('#menu', { state: 'visible' });
+  await page.click('[data-tab="flight"]');
+  await domClick('#aircraft-list .row[data-aircraft="a320"]');
+  await page.waitForFunction(() => document.querySelector('#aircraft-list .row.sel')?.dataset.aircraft === 'a320');
+  await sim(() => window.__sim.start({ ...window.__sim.app.settings, aircraft: 'a320', airport: 'KSFO', startMode: 'runway', spawn: '', coldDark: false }));
+  await page.waitForFunction(() => window.__sim?.ac?.cfg.id === 'a320' && !document.getElementById('loading'), null, { timeout: 90000 });
+  const deck = await sim(() => ({ screens: window.__sim.flight.cockpit.screens?.length ?? 0, jet: window.__sim.ac.isJet, engines: window.__sim.ac.engines.length, running: window.__sim.ac.engines.every((e) => e.running) }));
+  assert(deck.screens >= 7 && deck.jet && deck.engines === 2 && deck.running, 'glass cockpit + 2 running turbofans ' + JSON.stringify(deck));
+  await page.locator('#view').focus();
+  await page.keyboard.press('KeyG');
+  assert(await sim(() => window.__sim.ac.controls.gearDown), 'gear lever locked down on the ground');
+  await page.keyboard.press('Shift+KeyZ');
+  assert(!(await sim(() => window.__sim.ac.autopilot.engaged)), 'autopilot cannot engage on the ground');
+  const dto = await sim(() => { const c = window.__sim.flight.cockpit.cdu; c.key('DIR'); c.refresh(1e9); c.key('L1'); return { page: c.page, list: c.list.length, dto: window.__sim.ac.nav.dto?.ident ?? null }; });
+  assert(dto.list > 0 && dto.dto, 'CDU DIR page lists airports and sets a direct-to ' + JSON.stringify(dto));
+  await page.waitForTimeout(1500);
+  await shot('10-a320-flight-deck');
+  // ILS approach from 8 NM: AP + approach mode + autothrottle, flown by the simulation to a full stop.
+  await sim(() => window.__sim.start({ ...window.__sim.app.settings, aircraft: 'a320', airport: 'KSFO', startMode: 'approach', spawn: 'RWY 28R', approachNm: 8 }));
+  await page.waitForFunction(() => window.__sim?.ac?.cfg.id === 'a320' && !window.__sim.ac.onGround && !document.getElementById('loading'), null, { timeout: 90000 });
+  await page.locator('#view').focus();
+  await page.keyboard.press('Shift+KeyZ'); await page.keyboard.press('Shift+KeyA'); await page.keyboard.press('Shift+KeyR');
+  const modes = await sim(() => window.__sim.ac.autopilot.fma());
+  assert(modes.ap === 'AP' && (modes.latArm === 'LOC' || modes.lat === 'LOC') && modes.at, 'AP, APPR and A/THR engaged by keyboard ' + JSON.stringify(modes));
+  await page.waitForTimeout(1500);
+  await shot('11-a320-ils-final');
+  const r = await sim(() => {
+    const S = window.__sim; let td = null, flare = false;
+    for (let k = 0; k < 200 && !(td && S.ac.snapshot().gs < 1); k++) {
+      S.advance(2, (st, ac) => {
+        if (ac.autopilot.vert === 'FLARE') flare = true;
+        if (!td && ac.wheelState.some((w, i) => i > 0 && w.contact)) td = { sink: -st.vs / 0.3048 * 60, surface: st.surface };
+        if (td && !ac.autopilot.engaged) { ac.controls.reverse = st.ias / 0.514444 > 60 ? 1 : 0; ac.controls.brakeL = ac.controls.brakeR = 0.5; }
+      });
+      if (S.flight.crashed) break;
+    }
+    return { td, flare, crashed: S.flight.crashed, dmg: S.damage().destroyed, gs: S.ac.snapshot().gs, ils: S.ac.nav.ils?.ident };
+  });
+  assert(r.flare && r.td && !r.crashed && !r.dmg, 'autoland flare and touchdown without damage ' + JSON.stringify(r));
+  assert(r.td.sink < 600 && /runway|asphalt|concrete/.test(r.td.surface) && r.gs < 1, 'touchdown on the runway and stop ' + JSON.stringify(r));
+  await shot('12-a320-landed');
+});
+
+await test('fighter: afterburner takeoff run and HUD', async () => {
+  await sim(() => window.__sim.start({ ...window.__sim.app.settings, aircraft: 'fighter', airport: 'KSFO', startMode: 'runway', spawn: '', coldDark: false }));
+  await page.waitForFunction(() => window.__sim?.ac?.cfg.id === 'fighter' && !document.getElementById('loading'), null, { timeout: 90000 });
+  await page.locator('#view').focus();
+  await page.keyboard.press('F4');
+  await page.waitForFunction(() => !window.__sim.ac.setBrakesHeld && window.__sim.ac.controls.brakeL === 0, null, { timeout: 15000 }); // brakes released by the flight loop
+  const r = await sim(() => { const S = window.__sim; S.advance(6); return { ab: S.ac.engines[0].afterburner, kt: S.ac.snapshot().ias / 0.514444, hud: S.flight.cockpit.screens.some((s) => s.mat.transparent) }; });
+  assert(r.ab && r.kt > 60 && r.hud, 'afterburner lit, accelerating, HUD present ' + JSON.stringify(r));
+  await page.waitForTimeout(1500);
+  await shot('13-fighter-hud');
+  await sim(() => window.__sim.menu());
+});
+
 await page.goto('about:blank'); // stop the desktop page rendering while the phone test runs
 
 await test('phone (touch, landscape): menu reachable, stick / throttle / flaps / cockpit tap / look-around', async () => {

@@ -1,11 +1,31 @@
 # World Flight Simulator
 
-A browser flight simulator built with Three.js / WebGL2. It has a real 6-degree-of-freedom flight model, an interactive 3D cockpit, real terrain elevation, the world's airports, and a physics-driven crash and damage model.
+A browser flight simulator built with Three.js / WebGL2. It has a real 6-degree-of-freedom flight model, eight aircraft from a light trainer to widebody airliners and a fighter, interactive 3D cockpits (analogue and glass), real terrain elevation, the world's airports, and a physics-driven crash and damage model.
 
-> **Status: Phase 2 playable prototype.** This is **not** a Microsoft Flight Simulator replacement. It contains no MSFS assets and no satellite imagery. See [docs/PHASE_REPORTS/phase-2.md](docs/PHASE_REPORTS/phase-2.md) for exactly what works, what is simplified, and the known bugs. See [docs/ROADMAP.md](docs/ROADMAP.md) for what comes next.
+> **Status: Phase 3 (aircraft and cockpit systems).** This is **not** a Microsoft Flight Simulator replacement. It contains no MSFS assets and no satellite imagery, and the aircraft data are class-typical, not certified. See [docs/PHASE_REPORTS/phase-3.md](docs/PHASE_REPORTS/phase-3.md) for exactly what works, what is simplified, and the known bugs (Phase 2 GA-172 details: [phase-2.md](docs/PHASE_REPORTS/phase-2.md)). See [docs/ROADMAP.md](docs/ROADMAP.md) for what comes next.
 
 ## What you can do today
 
+- **Choose from eight aircraft** (named by class; original geometry, class-typical data):
+  - GA-172 Skyfarer (Cessna 172-class)
+  - TP-200 Stratus (King Air 200-class twin turboprop)
+  - NB-320 Meridian (A320-class, fly-by-wire sidestick)
+  - NB-738 Cascade (737-800-class)
+  - WB-789 Horizon (787-9-class)
+  - WB-359 Aurora (A350-900-class)
+  - FX-16 Kestrel (F-16-class fighter with afterburner and HUD)
+  - CT-130 Packhorse (C-130-class four-engine turboprop)
+- **Airliners, turboprops and the fighter** have:
+  - turbofan engines (N1/N2 spool, lapse, reversers, afterburner) or turboprop engines (governed props, feathering, beta/reverse);
+  - retractable gear, flaps and slats, spoilers and speed brakes;
+  - hydraulics, pressurisation, APU, master warning and caution, and GPWS with spoken callouts;
+  - Airbus-type, Boeing-type or fighter fly-by-wire laws with protections.
+- **Autopilot and autothrottle:** HDG, NAV (direct-to), LOC/GS approach, ALT, V/S and FLC, with **autoland** on the airliners.
+- **Glass flight decks** with real window apertures:
+  - PFD, ND, EICAS, standby and MCP;
+  - CDU (INIT/PERF/PROG/DIR/APPR) and an overhead panel;
+  - thrust, prop and condition levers, gear lever, sidestick or yoke;
+  - on the fighter, a conformal HUD and MFDs.
 - **Fly the GA-172 Skyfarer**, a Cessna 172-class aircraft.
   - Coefficient-based 6-DOF flight model, tuned to public C172S POH numbers. Automated tests check it against them:
     - Takeoff roll about 300 m.
@@ -30,7 +50,7 @@ A browser flight simulator built with Three.js / WebGL2. It has a real 6-degree-
 - **Weather and time.**
   - Wind profile, gusts, turbulence (with a rotational component), QNH and temperature, and visibility fog.
   - Real solar position for any date and time, a night sky, and runway, approach and taxi lighting with a working PAPI.
-- **Sound**, all synthesised in Web Audio: engine, propeller, starter, wind, stall horn, flap motor, tyres, impacts.
+- **Sound**, all synthesised in Web Audio: piston engine and propeller, turbofan whine and roar, afterburner, turboprop blade tone, starter, wind, stall horn, flap and gear motors, warning and caution chimes, AP disconnect, overspeed clacker, GPWS speech, tyres, impacts.
 - **Phones and tablets:** touch stick, throttle lever, rudder, brakes, flaps and trim buttons, touch look-around and pinch zoom, and a responsive menu.
 - **UI.** Main menu with flight setup, a world map of every airport, weather and time, assistance and damage mode, graphics presets (Low to Ultra, plus dynamic resolution), and a controls reference. In flight: HUD, debug/telemetry panel, pause menu.
 
@@ -62,6 +82,13 @@ npm run build:artifact  # build + smoke-test the shareable preview page (see CLA
 3. At about 55 kt, pull back with **↓** (or **S**) to about 8° nose-up. Climb at 74 kt.
 4. **V** cycles views (cockpit, chase, orbit, tower). **I** zooms on the instruments. Right-drag to look around. **H** toggles the HUD, **`** toggles the debug panel, **Esc** pauses.
 
+**Airliners and other transports** (choose them in the Aircraft card of the Flight tab):
+- **Runway start:** take-off flaps are set and the spoilers armed. Use **F4** for full thrust and rotate at the Vr shown in the hint. After lift-off, **G** raises the gear.
+- **Climb on the autopilot:** **Shift+Z** engages it. **Shift+H** selects heading mode and **Shift+F** level change. **Shift+R** engages the autothrottle. Set the selectors with **Shift+←/→** (heading), **Shift+↑/↓** (altitude) and **Ctrl+↑/↓** (speed), or use the knobs on the glareshield panel.
+- **Final-approach start:** the aircraft is in landing configuration on the glide path with the runway's ILS tuned. **Shift+Z** then **Shift+A** (approach) and **Shift+R** (autothrottle) fly it down. Aircraft with autoland flare and touch down by themselves. After touchdown, use **R** for reverse thrust and **B** for the brakes.
+- **Cold & dark start:** **Ctrl+Shift+E** runs the automatic start sequence (battery, APU, engines in turn). You can also use the overhead panel.
+- **CDU on the pedestal:** DIR sets a direct-to; NAV mode (**Shift+N**) then follows it. APPR tunes the ILS for any runway at the destination.
+
 **On a phone or tablet** (landscape recommended), on-screen controls appear automatically:
 - **Left stick** — drag down to pull (nose up), up to push, sideways to roll. It re-centres when you let go.
 - **◀ ▶** — rudder and nose-wheel steering.
@@ -76,11 +103,14 @@ The full key list is under **Menu → Controls**. The cold-and-dark start proced
 ## Tests
 
 ```bash
-npm test             # 75 unit + scenario tests (Vitest, Node): geodesy, atmosphere, aero, engine,
-                     # systems, instruments, collision, damage, terrain, airports, full-flight scenarios
-npm run test:e2e     # 11 browser end-to-end tests (incl. an emulated touch phone) (Playwright + Chromium): boot, search, world map,
-                     # start flight, keyboard + mouse cockpit input, takeoff/climb, crash → replay → restart,
-                     # procedural airport approach, no runtime errors. Screenshots in tests/e2e/output/
+npm test             # 138 unit + scenario tests (Vitest, Node): geodesy, atmosphere, aero, piston/turbofan/
+                     # turboprop engines, systems (hydraulics, pressurisation, APU, GPWS, nav), instruments,
+                     # collision, damage, terrain, airports, GA-172 and fleet flight scenarios (takeoff, cruise,
+                     # stall, autopilot, engine-out, FBW protections, ILS autoland)
+npm run test:e2e     # 13 browser end-to-end tests (incl. an emulated touch phone) (Playwright + Chromium): boot, search,
+                     # world map, start flight, keyboard + mouse cockpit input, takeoff/climb, crash → replay → restart,
+                     # procedural airport approach, A320-class glass cockpit + ILS autoland at KSFO, fighter AB + HUD,
+                     # no runtime errors. Screenshots in tests/e2e/output/
 ```
 
 `test:e2e` needs a Chromium that Playwright can launch. Install one with `npx playwright install chromium`, or set `CHROMIUM_PATH`.

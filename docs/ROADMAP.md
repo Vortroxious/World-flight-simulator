@@ -3,20 +3,13 @@
 ## Phase 1 – Research and architecture ✅
 Datasets and licensing, architecture and risks: [PHASE_REPORTS/phase-1-plan.md](PHASE_REPORTS/phase-1-plan.md).
 
-## Phase 2 – Playable prototype ✅ (this build)
+## Phase 2 – Playable prototype ✅
 GA-172, KSFO hero airport, worldwide airports and runways, streamed terrain, interactive cockpit, crash and damage, tests. See [PHASE_REPORTS/phase-2.md](PHASE_REPORTS/phase-2.md).
 
-## Phase 3 – Aircraft and cockpit systems
-- Engine modules: turboprop (shaft power, beta and reverse) and turbofan (N1/N2 spool, thrust lapse, reversers, afterburner).
-- Aircraft configs and parametric models:
-  - King Air-class turboprop
-  - A320-class and 737-class narrowbodies
-  - 787-class and A350-class widebodies
-  - A fighter
-  - A cargo aircraft
-- Glass cockpits: PFD, ND, EICAS and FMC/CDU. Fighter HUD. Overhead panels.
-- Retractable gear with hydraulics, pressurisation, master caution and warning, GPWS callouts.
-- **Autopilot**, built as cascaded controllers on the control surfaces: HDG, ALT, VS, SPD/autothrottle, NAV, APP, with mode annunciation.
+## Phase 3 – Aircraft and cockpit systems ✅ (this build)
+Eight aircraft (King Air-, A320-, 737-, 787-, A350-, F-16- and C-130-class added), turbofan and turboprop engines, retractable gear, hydraulics, pressurisation, APU, alerts and GPWS, fly-by-wire laws, autopilot/autothrottle with autoland, direct-to and synthetic ILS, parametric exterior models, glass flight decks with MCP/CDU/overhead and a fighter HUD. See [PHASE_REPORTS/phase-3.md](PHASE_REPORTS/phase-3.md).
+
+Carried forward from Phase 3: flight plans and LNAV/VNAV in the CDU, TO/GA and FLEX autothrottle modes, alternate/direct law degradation, fire handles, fuel transfer controls, textured liveries.
 
 ## Phase 4 – Geographic expansion
 - World map with Natural Earth coastlines.

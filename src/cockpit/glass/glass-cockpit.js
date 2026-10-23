@@ -265,31 +265,31 @@ export class GlassCockpit {
     const ac = this.ac, cmd = this.cmd, E = this.E, M = this.mats, ap = ac.autopilot;
     const pz = E.z - 0.62;
     // tub, side rails, panel, glareshield
-    this.add(new THREE.BoxGeometry(0.72, 0.36, 0.05), M.dark, 0, E.y - 0.38, pz);
-    this.add(new THREE.BoxGeometry(0.3, 0.05, 0.22), M.black, 0, E.y - 0.18, pz + 0.08);
+    this.add(new THREE.BoxGeometry(0.72, 0.3, 0.05), M.dark, 0, E.y - 0.47, pz);
+    this.add(new THREE.BoxGeometry(0.3, 0.03, 0.1), M.black, 0, E.y - 0.33, pz + 0.05);
     for (const s of [-1, 1]) this.add(new THREE.BoxGeometry(0.12, 0.08, 1.3), M.dark, s * 0.36, E.y - 0.5, E.z - 0.05);
     this.add(new THREE.BoxGeometry(0.5, 0.8, 0.12), M.seat, 0, E.y - 0.45, E.z + 0.35);
     // canopy bow behind the head
     const bow = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.02, 6, 24, Math.PI), M.dark); bow.position.set(0, E.y - 0.3, E.z + 0.45); this.root.add(bow);
     // HUD combiner (conformal: its angular size defines the symbology scale)
-    const hz = E.z - 0.52, hh = 0.15, fov = 2 * Math.atan(hh / 2 / 0.52) * 180 / Math.PI;
-    const hud = this.screen(0.15, hh, 640, 0, E.y - 0.02, hz, (g, W, H) => drawHUD(g, W, H, ac, fov), 1, { transparent: true });
+    const hz = E.z - 0.5, hh = 0.21, fov = 2 * Math.atan(hh / 2 / 0.5) * 180 / Math.PI; // ~24° tall, like a wide-angle HUD
+    const hud = this.screen(0.23, hh, 768, 0, E.y - 0.04, hz, (g, W, H) => drawHUD(g, W, H, ac, fov), 1, { transparent: true });
     hud.mesh.renderOrder = 10;
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.012, 0.03), M.black); frame.position.set(0, E.y - 0.1, hz); this.root.add(frame);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.012, 0.03), M.black); frame.position.set(0, E.y - 0.155, hz); this.root.add(frame);
     // MFDs
-    this.screen(0.13, 0.13, 384, -0.16, E.y - 0.36, pz + 0.03, (g, W, H) => drawFighterMFD(g, W, H, ac), 4);
+    this.screen(0.13, 0.13, 384, -0.16, E.y - 0.47, pz + 0.03, (g, W, H) => drawFighterMFD(g, W, H, ac), 4);
     this.nd.range = 40;
-    this.screen(0.13, 0.13, 384, 0.16, E.y - 0.36, pz + 0.03, (g, W, H) => drawND(g, W, H, ac, this.nd), 4);
+    this.screen(0.13, 0.13, 384, 0.16, E.y - 0.47, pz + 0.03, (g, W, H) => drawND(g, W, H, ac, this.nd), 4);
     // gear handle (left panel)
-    const gh = this.add(new THREE.CylinderGeometry(0.014, 0.014, 0.03, 12).rotateX(Math.PI / 2), M.white, -0.3, E.y - 0.3, pz + 0.05);
+    const gh = this.add(new THREE.CylinderGeometry(0.014, 0.014, 0.03, 12).rotateX(Math.PI / 2), M.white, -0.3, E.y - 0.44, pz + 0.05);
     this.interactive(gh, { label: 'Landing gear handle', value: () => (ac.controls.gearDown ? 'DOWN' : 'UP'), click: () => cmd.gear() });
-    this.anim.push(() => { gh.position.y = E.y - 0.3 + (ac.controls.gearDown ? -0.03 : 0.03); });
+    this.anim.push(() => { gh.position.y = E.y - 0.44 + (ac.controls.gearDown ? -0.03 : 0.03); });
     // AP panel (up-front)
-    const bt = (x, label, fn, lit) => this.button(x, E.y - 0.24, pz + 0.04, label, { click: fn, value: () => (lit() ? 'ON' : 'off') }, { w: 0.03, h: 0.016, lit });
+    const bt = (x, label, fn, lit) => this.button(x, E.y - 0.36, pz + 0.04, label, { click: fn, value: () => (lit() ? 'ON' : 'off') }, { w: 0.03, h: 0.016, lit });
     bt(-0.07, 'Autopilot (attitude hold / heading select)', () => cmd.apToggle(), () => ap.engaged);
     bt(-0.03, 'Heading select', () => cmd.apLateral('HDG'), () => ap.lat === 'HDG');
     bt(0.01, 'Altitude hold', () => cmd.apVertical('ALT'), () => ap.vert === 'ALT' || ap.vert === 'ALT*');
-    this.knob(0.06, E.y - 0.24, pz + 0.04, 0.01, 'Heading select (scroll)', { value: () => `${ap.sel.hdg}°`, wheel: (d, ev) => cmd.apBump('hdg', d * (ev?.shiftKey ? 10 : 1)), click: (b) => (b === 2 ? cmd.apSync('hdg') : cmd.apBump('hdg', 1)) });
+    this.knob(0.06, E.y - 0.36, pz + 0.04, 0.01, 'Heading select (scroll)', { value: () => `${ap.sel.hdg}°`, wheel: (d, ev) => cmd.apBump('hdg', d * (ev?.shiftKey ? 10 : 1)), click: (b) => (b === 2 ? cmd.apSync('hdg') : cmd.apBump('hdg', 1)) });
     // throttle (left console) and side-stick (right console)
     this.thr = new THREE.Group(); this.thr.position.set(-0.36, E.y - 0.46, E.z - 0.2); this.root.add(this.thr);
     const th = this.add(new THREE.BoxGeometry(0.04, 0.09, 0.05), M.black, 0, 0.045, 0, this.thr);

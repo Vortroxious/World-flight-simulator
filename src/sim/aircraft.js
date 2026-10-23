@@ -194,6 +194,7 @@ export class Aircraft {
     // Air data valid immediately (displays and autopilot read it before the first step).
     this.tas = V; this.iasTrue = iasKt * KT; this.mach = mach; this.alpha = al; this.beta = 0;
     this.qbar = 0.5 * atm.rho * V * V; this.agl = this.radioAlt = Math.max(altMsl - (opts.groundElev ?? 0), 0); // refined on the first step
+    this.onGround = false; for (const w of this.wheelState) { w.contact = false; w.compression = 0; w.force = 0; }
     const ap = this.autopilot.sel, e = this.euler;
     ap.alt = Math.round(altMsl / 0.3048 / 100) * 100; ap.hdg = Math.round(wrap360(e.psi * RAD - this.magvar)); ap.spd = Math.round(iasKt); ap.vs = 0;
   }

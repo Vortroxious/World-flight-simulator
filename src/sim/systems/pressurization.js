@@ -10,6 +10,7 @@ export class Pressurization {
   reset(altFt) { this.cabinAltFt = this.present ? Math.min(altFt, 8000 * Math.min(1, Math.max(0, altFt) / 40000)) : altFt; }
   update(dt, altM, bleedAvailable) {
     const altFt = altM / 0.3048;
+    this.pAmb = atmosphere(altM).p;
     if (!this.present) { this.cabinAltFt = altFt; this.rateFpm = 0; return; }
     let target;
     if (this.packs && bleedAvailable) {
@@ -25,7 +26,8 @@ export class Pressurization {
     }
     this.cabinAltFt += (this.rateFpm / 60) * dt;
   }
-  get diffPsi() { return this.present ? (atmosphere(this.cabinAltFt * 0.3048).p - atmosphere(0).p) / PSI : 0; }
+  /** Cabin-to-ambient pressure differential (psi). */
+  get diffPsi() { return this.present && this.pAmb ? (atmosphere(this.cabinAltFt * 0.3048).p - this.pAmb) / PSI : 0; }
   get warning() { return this.present && this.cabinAltFt > 10000; }
 }
 

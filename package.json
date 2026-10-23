@@ -1,6 +1,6 @@
 {
   "name": "world-flight-simulator",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "WORLD FLIGHT SIMULATOR - browser flight simulator (Three.js / WebGL2)",
   "type": "module",
   "private": true,

@@ -42,6 +42,12 @@ Everything under `src/sim`, `src/geo`, `src/world/terrain/terrain-core.js` and `
   - Spring-damper struts with travel limits and bottoming.
   - Tyre friction in the wheel's ground frame: rolling resistance by surface, brakes (differential and parking), lateral friction limited by a friction circle, and nose-wheel steering by rudder.
 - **Airframe contacts**: 14 hard points (prop tip, cowl, belly, tailcone, roof, fin, stabiliser tips, wing tips and mid-spans). Each is a stiff penalty contact with friction against terrain, runway and buildings. Water contact uses buoyancy (gradual flooding) and hydrodynamic drag. Tree crowns apply branch drag and damage; trunks are hard.
+- **Multi-engine propulsion** (`propulsion/{piston,turbofan,turboprop}.js`, `makeEngine`): every engine applies its thrust at its body position along its thrust axis, so failures create real asymmetric moments. Turbofans: N1/N2 spool lag, bleed/electric start, lapse `σ^n·(1 − a·M + b·M²)`, TSFC, reversers, afterburner. Turboprops: Ng, flat-rated shaft power, governed Np, momentum thrust `T = ηP/√(V² + Vs²)`, auto-feather, beta/reverse.
+- **Transport systems** (`systems/hydraulics.js`, `pressurization.js`, `gpws.js`): hydraulic pressure per system from engine/electric pumps gates flaps, gear and spoilers; cabin altitude schedule limited by max differential; APU; GPWS modes 1–6 and callouts; warnings/cautions latch the master lights (`aircraft.updateAlerts`).
+- **Control laws** (`fdm/control-laws.js`, `fdm/fbw.js`): model-based rate loops compute surface deflection from desired angular acceleration ÷ control effectiveness (`CmDe·q̄·S·c/Iyy`), plus a pull-up feed-forward and an integrator acting as trim (auto-trim). Airbus-, Boeing- and fighter-type laws add flight-path/bank hold and predictive g, AoA, attitude and speed protections; they blend to direct law on the ground.
+- **Autopilot** (`autopilot/autopilot.js`): outer loops turn modes into bank / flight-path targets (path law with γ̇ damping and anti-windup), FLC pitches for speed, autothrottle with filtered speed trend; FLARE/ROLLOUT for autoland. It moves the real surfaces through the same rate loops — the aircraft is never repositioned.
+- **Navigation** (`nav/nav.js`): direct-to (DTK, XTK, ETE) and a synthetic ILS per runway end (localizer beyond the far end, glideslope antenna 300 m past the threshold, 3°).
+- **Trim solution** (`placeAirborne`): iterates angle of attack, stabiliser trim and thrust on the full aerodynamic model including the thrust-line moment, so airborne starts are trimmed for every aircraft.
 - **Integration**: semi-implicit Euler at **240 Hz**, chosen for contact stiffness. The full 6-DOF Euler equations include the gyroscopic `ω × Iω` term. Inertia scales with mass, and mass falls as fuel burns.
 
 ## Damage model (`sim/damage/damage.js`)
@@ -97,8 +103,16 @@ Everything under `src/sim`, `src/geo`, `src/world/terrain/terrain-core.js` and `
 - Instruments: one `CanvasTexture` per gauge, redrawn at about 30 Hz from the instrument models. Each is emissive with the panel lights at night.
 - Controls are meshes with a `userData.ctl` descriptor (`click`, `down`, `up`, `drag`, `wheel`, `label`, `value`). `CockpitInteraction` raycasts, highlights, shows a tooltip, and handles right-drag free look and wheel zoom.
 
+### Glass flight decks (`cockpit/glass/*`)
+- `GlassCockpit` lays out a flight deck around the configured eye point: displays are `CanvasTexture` planes (unlit) redrawn at 8–30 Hz, controls use the same `userData.ctl` contract, CDU keys and overhead switches are invisible hit planes over the canvas faces.
+- `displays.js` draws the PFD (FMA, tapes, FD, ILS), ND (arc), EICAS/E-WD, standby, fighter HUD (conformal: the canvas's angular size sets the ladder scale) and MFD; `cdu.js` holds the CDU pages and talks to the flight session through a provider (nearest airports, runways, direct-to, ILS tuning).
+- The exterior model supplies `flightDeckShell()`: the fuselage loft's inward faces with the windshield apertures cut out, so the view out is through real window openings.
+
+## Exterior models (`render/models/*`)
+- `ParametricModel` builds airliner, twin-turboprop, cargo and fighter families from the configuration (geometry, layout, engines, gear): lofted fuselage with an eye-anchored nose crown line, multi-station wings with movable surfaces, tail, nacelles/props, bogie gear, lights. Part names match damage components. `createAircraftModel` keeps the hand-shaped GA-172 model.
+
 ## Data formats
 
-- `src/aircraft/<id>/config.json`: everything aircraft-specific (mass and inertia, geometry, aero tables and derivatives, controls, engine and propeller, fuel, electrical, gear, contact points, damage thresholds, V-speeds). Adding an aircraft is primarily a new config. Phase 3 adds turboprop and turbofan engine modules and per-aircraft cockpits.
+- `src/aircraft/<id>/config.(json|js)`: everything aircraft-specific (Phase 3 configs are JS modules built with `defineAircraft()` in `src/aircraft/builder.js`, which derives struts, contact points, damage components and inertia from dimensions; the registry is `src/aircraft/index.js`) (mass and inertia, geometry, aero tables and derivatives, controls, engine and propeller, fuel, electrical, gear, contact points, damage thresholds, V-speeds). Adding an aircraft is primarily a new config. Phase 3 adds turboprop and turbofan engine modules and per-aircraft cockpits.
 - `public/data/hero/<ICAO>.json`: OSM layout in local metres around a reference point.
 - Terrain packs: Int16 heights plus a JSON manifest (`z`, `n`, `scale`, tile list).
