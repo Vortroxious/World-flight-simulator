@@ -25,7 +25,8 @@ export function defineAircraft(p) {
   const noseShare = -L.mainX / (L.noseX - L.mainX);
   const defl = L.staticDeflection ?? 0.14;
   const strut = (share) => { const k = (share * W) / defl; return { k: Math.round(k), c: Math.round(2 * 0.55 * Math.sqrt(k * share * W / G)) }; };
-  const nose = strut(noseShare), main = strut((1 - noseShare) / 2);
+  // Nose struts are sized for derotation and braking loads, not just the (small) static share.
+  const nose = strut(Math.max(noseShare, Math.min(0.12, noseShare * 2.5))), main = strut((1 - noseShare) / 2);
   const H = L.cgHeight;
   const wheels = [
     { name: 'nose', component: 'noseGear', pos: [L.noseX, 0, H], ...nose, travel: defl * 2.5, steer: true, brake: false, radius: L.noseWheelRadius ?? 0.4 },
@@ -54,7 +55,7 @@ export function defineAircraft(p) {
   const gearV = cat === 'fighter' ? [3.6, 5.5] : cat === 'ga' ? [3.0, 4.8] : [3.1, 4.7];
   const scrape = (base) => Math.round(base * (m.maxTakeoff / 1000) ** 0.8);
   Object.assign(components, {
-    noseGear: { vSafe: gearV[0] * 0.85, vFail: gearV[1] * 0.85, loadLimit: Math.round(noseShare * W * 3.5), sideLimit: Math.round(noseShare * W * 1.2), detachable: true },
+    noseGear: { vSafe: gearV[0] * 0.85, vFail: gearV[1] * 0.85, loadLimit: Math.round(Math.max(noseShare, 0.12) * W * 3.5), sideLimit: Math.round(Math.max(noseShare, 0.12) * W * 1.2), detachable: true },
     leftMainGear: { vSafe: gearV[0], vFail: gearV[1], loadLimit: Math.round((1 - noseShare) / 2 * W * 3.2), sideLimit: Math.round((1 - noseShare) / 2 * W * 1.1), detachable: true },
     rightMainGear: { vSafe: gearV[0], vFail: gearV[1], loadLimit: Math.round((1 - noseShare) / 2 * W * 3.2), sideLimit: Math.round((1 - noseShare) / 2 * W * 1.1), detachable: true },
     fuselage: { vSafe: 1.5, vFail: 9.0, scrapeEnergy: scrape(900000), detachable: false },

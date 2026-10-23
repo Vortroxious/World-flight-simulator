@@ -13,7 +13,7 @@ import { AttitudeLoops } from './control-laws.js';
 
 export class FlyByWire {
   constructor(cfg) { this.cfg = cfg; this.loops = new AttitudeLoops(); this.reset(); }
-  reset() { this.loops.reset(); this.gammaHold = null; this.bankHold = null; this.law = 'NORMAL'; this.protections = []; }
+  reset() { this.loops.reset(); this.nzPrev = null; this.nzDot = 0; this.gammaHold = null; this.bankHold = null; this.law = 'NORMAL'; this.protections = []; }
 
   /**
    * @param {object} ac Aircraft @param {{x:number,y:number}} stick pilot inputs (-1..1, y + = pull)
@@ -40,14 +40,21 @@ export class FlyByWire {
       this.gammaHold = null;
       qCmd = turnComp + stick.y * f.qMax * DEG * (stick.y > 0 ? 1 : 0.8);
     }
-    // Load factor limits.
-    if (ac.nz > f.nzMax - 0.15) { qCmd = Math.min(qCmd, -1.5 * (ac.nz - f.nzMax + 0.15) * G0 / V); this.protections.push('G'); }
-    if (ac.nz < f.nzMin + 0.15) { qCmd = Math.max(qCmd, 1.5 * (f.nzMin + 0.15 - ac.nz) * G0 / V); this.protections.push('G'); }
+    // Load factor limits: feed-forward pitch-rate cap from q ≈ (nz − cosθ·cosφ)·g/V, tightened by the
+    // predicted load factor (nz + 0.3 s of its filtered rate) so short-period overshoot stays small.
+    const nzRate = this.nzPrev == null ? 0 : (ac.nz - this.nzPrev) / dt;
+    this.nzPrev = ac.nz; this.nzDot += (nzRate - this.nzDot) * clamp(dt / 0.08, 0, 1);
+    const nzPred = ac.nz + 0.3 * this.nzDot, c1 = Math.cos(theta) * Math.cos(phi);
+    const qHi = ((f.nzMax - c1) * G0) / V - Math.max(0, nzPred - f.nzMax) * 2 * G0 / V;
+    const qLo = ((f.nzMin - c1) * G0) / V + Math.max(0, f.nzMin - nzPred) * 2 * G0 / V;
+    if (qCmd > qHi) { qCmd = qHi; if (ac.nz > f.nzMax - 0.3) this.protections.push('G'); }
+    if (qCmd < qLo) { qCmd = qLo; if (ac.nz < f.nzMin + 0.3) this.protections.push('G'); }
     // AoA protection: commanded alpha limited between alphaProt (neutral) and alphaMax (full back stick).
     const shift = ac.aero.flapValue(ac.flapDeg, 'alphaShift');
     const aProt = (f.alphaProtDeg - shift) * DEG, aMax = (f.alphaMaxDeg - shift) * DEG;
     const aLim = aProt + Math.max(0, stick.y) * (aMax - aProt);
-    if (ac.alpha > aProt - 1 * DEG) { qCmd = Math.min(qCmd, 2.0 * (aLim - ac.alpha)); if (ac.alpha > aProt) this.protections.push('ALPHA'); }
+    const aPred = ac.alpha + 0.3 * clamp(ac.alphaDot ?? 0, -1, 1);
+    if (aPred > aProt - 1 * DEG) { qCmd = Math.min(qCmd, 2.0 * (aLim - aPred)); if (ac.alpha > aProt) this.protections.push('ALPHA'); }
     // Pitch attitude limits.
     if (theta > f.pitchMax * DEG) qCmd = Math.min(qCmd, 1.5 * (f.pitchMax * DEG - theta));
     if (theta < f.pitchMin * DEG) qCmd = Math.max(qCmd, 1.5 * (f.pitchMin * DEG - theta));

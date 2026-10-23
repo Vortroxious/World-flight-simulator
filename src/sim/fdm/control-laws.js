@@ -15,9 +15,21 @@ export class AttitudeLoops {
     if (this.iPitch === null) this.iPitch = ac.totalDe ?? 0;
     const upMax = c.elevatorUpDeg * DEG, dnMax = c.elevatorDownDeg * DEG;
     this.iPitch = clamp(this.iPitch + (0.7 * Kq * (qDes - q) / eff) * dt, -dnMax - c.trimRangeRad, upMax + c.trimRangeRad);
-    const de = this.iPitch + (Kq * (qDes - q)) / eff;
+    const de = this.iPitch + this.pitchFeedForward(ac, qDes) + (Kq * (qDes - q)) / eff;
     const surf = de - ac.controls.trim * c.trimRangeRad;
     return clamp(surf >= 0 ? surf / upMax : surf / dnMax, -1, 1);
+  }
+
+  /**
+   * Elevator increment that sustains a steady pitch rate (pull-up): the extra angle of attack for the extra
+   * load factor (q·V/g) times the static stability, plus pitch damping, divided by elevator power.
+   */
+  pitchFeedForward(ac, qDes) {
+    const a = ac.cfg.aero, g = ac.cfg.geometry, V = Math.max(ac.tas || 0, 30), qbar = Math.max(ac.qbar || 0, 50);
+    const CLa = a.generic?.CLalpha ?? a.CLalpha ?? 5;
+    const dAlpha = (qDes * V / 9.80665) * ac.mass * 9.80665 / (qbar * g.wingArea * CLa);
+    const dCm = (a.CmAlphaWingBody + a.CmAlphaTail) * dAlpha + a.CmQ * qDes * g.chord / (2 * V);
+    return clamp(-dCm / a.CmDe, -0.15, 0.15);
   }
 
   /** Returns aileron control position (-1..1) to achieve roll rate pDes (rad/s). */

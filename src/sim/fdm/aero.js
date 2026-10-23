@@ -20,7 +20,7 @@ export class Aero {
     if (!m || M <= m.mcrit) return 0;
     if (!m.supersonic || M < 1.0) return m.rise * (M - m.mcrit) ** 2 * (M < 1 ? 1 : 1);
     const peak = m.rise * (1.0 - m.mcrit) ** 2 + (m.peak ?? 0.02);
-    return M < 1.1 ? peak : peak / Math.pow(M * M - 1, 0.25) * 0.68;
+    return M < 1.1 ? peak : peak / Math.pow(M * M - 1, 0.3) * 0.75; // supersonic decay: F-16-class total CD ≈ 0.045 at M2
   }
 
   /** Interpolate a flap-table field for a (continuous) flap deflection in degrees. */

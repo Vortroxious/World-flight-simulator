@@ -58,10 +58,10 @@ export class TurbofanEngine {
 
     // Thrust (SLS fraction from N1, lapse with density and Mach).
     const frac = this.running ? 0.04 + 0.96 * Math.pow(clamp((this.n1 - this.idleN1) / (100 - this.idleN1), 0, 1), 1.6) : 0;
-    const lapse = Math.pow(atm.sigma, c.densityLapse ?? 0.8) * Math.max(0.2, 1 - (c.machLapse ?? 0.5) * mach + 0.25 * mach * mach);
+    const lapse = Math.pow(atm.sigma, c.densityLapse ?? 0.8) * Math.max(0.2, 1 - (c.machLapse ?? 0.5) * mach + (c.machRam ?? 0.25) * mach * mach);
     let T = c.maxThrust * frac * lapse;
     this.afterburner = !!c.afterburner && this.running && thr > 0.97 && this.n1 > 90 && this.reverser < 0.1;
-    if (this.afterburner) T *= c.afterburner.thrustMult * (1 + 0.25 * mach);
+    if (this.afterburner) T *= c.afterburner.thrustMult;
     // Thrust reversers: hydraulically driven, ground only.
     const wantRev = this.reverse > 0.05 && sys.onGround && c.reverser;
     this.reverser = clamp(this.reverser + (wantRev ? 1 : -1) * dt / 1.8, 0, 1);
@@ -69,7 +69,7 @@ export class TurbofanEngine {
     // Windmilling / failed engine ram drag
     if (!this.running) T = -0.5 * atm.rho * V * V * (c.inletArea ?? 2) * 0.06;
     this.thrust = T;
-    const tsfc = (c.tsfc ?? 1.0e-5) * (1 + 0.55 * mach) * (this.afterburner ? c.afterburner.tsfcMult : 1);
+    const tsfc = (c.tsfc ?? 1.0e-5) * (this.afterburner ? c.afterburner.tsfcMult * (1 + 0.15 * mach) : 1 + 0.55 * mach);
     this.fuelFlow = this.running ? tsfc * Math.max(Math.abs(T), 0.035 * c.maxThrust * atm.sigma) : 0;
     this.power = Math.max(0, T * V); this.rpm = this.n2; // generic indications
     const egtT = this.running ? 380 + 520 * (this.n1 / 100) ** 2 * (1.15 - 0.15 * this.health) + (this.afterburner ? 150 : 0) : atm.T - 273.15 + (this.starting ? 150 : 0);

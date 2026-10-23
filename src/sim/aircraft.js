@@ -162,11 +162,38 @@ export class Aircraft {
       if (this.steadyThrust(t, atm, V, mach) > D) t1 = t; else t0 = t;
     }
     this.controls.throttle = (t0 + t1) / 2;
-    this.steadyThrust(this.controls.throttle, atm, V, mach);
+    let T = this.steadyThrust(this.controls.throttle, atm, V, mach);
+    // Refine with the full aerodynamic model: solve angle of attack, stabiliser trim and thrust together,
+    // including the pitching moment of the thrust line (engines below/above the CG) and Mach effects.
+    const g = this.cfg.geometry, S = g.wingArea, out = { F: [0, 0, 0], M: [0, 0, 0] };
+    const engArm = this.cfg.engines.reduce((acc, e) => { const p = e.position || [0, 0, 0], ax = e.thrustAxis || [1, 0, 0]; return acc + (p[2] * ax[0] - p[0] * ax[2]); }, 0) / this.cfg.engines.length;
+    const CLa = a.generic?.CLalpha ?? 5;
+    let al = alpha, de = this.totalDe;
+    for (let it = 0; it < 12; it++) {
+      const th = al + gamma;
+      const r = this.aero.compute({
+        alpha: al, beta: 0, V, qbar: qS / S, p: 0, q: 0, r: 0, alphaDot: 0, flapDeg: flap, de, da: 0, dr: 0, agl: 1e4,
+        damage: this.damage.aeroFactors, randomGust: 0, mach, liftDump: 0, dragExtra: gearDown && this.cfg.gear.retractable ? this.cfg.gear.dragCD : 0,
+      }, out);
+      const Treq = Math.max(0, W * Math.sin(th) - r.F[0]);
+      al = clamp(al + (r.F[2] + W * Math.cos(th)) / (CLa * qS), -8 * DEG, 16 * DEG);
+      de = clamp(de - (r.M[1] + Treq * engArm) / (a.CmDe * qS * g.chord), -0.5, 0.5);
+      if (it === 11) {
+        t0 = 0; t1 = 1;
+        for (let k = 0; k < 16; k++) { const t = (t0 + t1) / 2; if (this.steadyThrust(t, atm, V, mach) > Treq) t1 = t; else t0 = t; }
+        this.controls.throttle = (t0 + t1) / 2; T = this.steadyThrust(this.controls.throttle, atm, V, mach);
+      }
+    }
+    this.setAttitude(0, (al + gamma) * RAD, headingTrue);
+    this.controls.trim = clamp(de / this.cfg.controls.trimRangeRad, -1, 1);
+    this.totalDe = de;
     this.setSystemsOn();
     this.inst.align(this.snapshotForInstruments(atm), true);
     this.press.reset(altMsl / 0.3048);
-    this.alphaPrev = alpha;
+    this.alphaPrev = al;
+    // Air data valid immediately (displays and autopilot read it before the first step).
+    this.tas = V; this.iasTrue = iasKt * KT; this.mach = mach; this.alpha = al; this.beta = 0;
+    this.qbar = 0.5 * atm.rho * V * V; this.agl = this.radioAlt = Math.max(altMsl - (opts.groundElev ?? 0), 0); // refined on the first step
     const ap = this.autopilot.sel, e = this.euler;
     ap.alt = Math.round(altMsl / 0.3048 / 100) * 100; ap.hdg = Math.round(wrap360(e.psi * RAD - this.magvar)); ap.spd = Math.round(iasKt); ap.vs = 0;
   }
@@ -334,9 +361,11 @@ export class Aircraft {
     const defl = this.deflections(surf);
     this.totalDe = defl.de; this.surf = { elevator: defl.elevator, aileron: defl.aileron };
     const phi = this.euler.phi;
+    // Yaw damper: washout (high-passed) yaw-rate feedback damps dutch roll without opposing steady turns,
+    // plus a little sideslip feedback for coordination.
+    this.ydR = (this.ydR ?? 0) + (this.w[2] - (this.ydR ?? 0)) * Math.min(1, dt / 2.5);
     if (c.systems?.yawDamper && !this.onGround && V > 30 && this.elec.busVolts > 18) {
-      const rIdeal = (G0 * Math.tan(clamp(phi, -1.2, 1.2))) / Math.max(V, 30);
-      defl.dr = clamp(defl.dr + clamp(-2.5 * (this.w[2] - rIdeal) + 1.5 * beta, -0.25, 0.25), -c.controls.rudderDeg * DEG, c.controls.rudderDeg * DEG);
+      defl.dr = clamp(defl.dr + clamp(-2.0 * (this.w[2] - this.ydR) + 1.2 * beta, -0.25, 0.25), -c.controls.rudderDeg * DEG, c.controls.rudderDeg * DEG);
     }
     // Assistance: auto-rudder coordinates turns (sideslip -> rudder).
     if (this.assist.autoRudder && !this.onGround) defl.dr = clamp(defl.dr + 3.0 * beta, -c.controls.rudderDeg * DEG, c.controls.rudderDeg * DEG);
