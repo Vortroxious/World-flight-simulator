@@ -20,10 +20,11 @@ export class Electrical {
   powered(name) { return this.busVolts > 18 && !this.breakers[name]; }
   get avionicsPowered() { return this.switches.avionics && this.powered('avionics'); }
 
-  update(dt, rpm, extraAmps = 0, flapMotorRunning = false) {
+  /** genAvailable: an engine-driven alternator/generator (or APU) is turning fast enough. */
+  update(dt, genAvailable, extraAmps = 0, flapMotorRunning = false) {
     const c = this.cfg, s = this.switches;
     const batOpen = 23.4 + 1.6 * this.soc; // resting voltage
-    const altOnline = s.battery && s.alternator && !this.altFailed && rpm > 900;
+    const altOnline = s.battery && s.alternator && !this.altFailed && genAvailable;
     let load = 0;
     if (s.battery) {
       for (const k of ['navLights', 'beacon', 'strobe', 'landingLight', 'taxiLight', 'pitotHeat', 'fuelPump', 'panelLights']) if (s[k] && !this.breakers[k]) load += LOADS[k];

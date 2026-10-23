@@ -58,7 +58,7 @@ describe('Control surface response (sign conventions)', () => {
 
 describe('Piston engine and propeller', () => {
   const sl = atmosphere(0), sys = { fuelAvailable: true, busVolts: 28 };
-  const settle = (e, V, atm = sl, s = 30) => { for (let i = 0; i < s * 60; i++) e.update(1 / 60, atm, V, sys); return e; };
+  const settle = (e, V, atm = sl, s = 30) => { for (let i = 0; i < s * 60; i++) e.update(1 / 60, atm, V, 0, sys); return e; };
   it('static full-throttle: ~2300 rpm and ~2.2 kN thrust', () => {
     const e = new PistonEngine(cfg.engine); e.setRunning(1000); e.throttle = 1; settle(e, 0);
     expect(e.rpm).toBeGreaterThan(2200); expect(e.rpm).toBeLessThan(2450);
@@ -90,14 +90,14 @@ describe('Piston engine and propeller', () => {
   });
   it('starter cranks and the engine fires with mixture rich and magnetos on', () => {
     const e = new PistonEngine(cfg.engine); e.throttle = 0.1; e.mixture = 1; e.magnetos = MAGS.START;
-    for (let i = 0; i < 240 * 4 && !e.running; i++) e.update(1 / 240, sl, 0, sys);
+    for (let i = 0; i < 240 * 4 && !e.running; i++) e.update(1 / 240, sl, 0, 0, sys);
     expect(e.running).toBe(true);
     e.magnetos = MAGS.BOTH; settle(e, 0, sl, 10);
     expect(e.rpm).toBeGreaterThan(900); expect(e.oilPress).toBeGreaterThan(40);
   });
   it('no start without electrical power', () => {
     const e = new PistonEngine(cfg.engine); e.throttle = 0.1; e.mixture = 1; e.magnetos = MAGS.START;
-    for (let i = 0; i < 240 * 4; i++) e.update(1 / 240, sl, 0, { fuelAvailable: true, busVolts: 0 });
+    for (let i = 0; i < 240 * 4; i++) e.update(1 / 240, sl, 0, 0, { fuelAvailable: true, busVolts: 0 });
     expect(e.running).toBe(false);
   });
 });

@@ -9,7 +9,10 @@ export class FuelSystem {
   setFraction(f) { for (const t of this.tanks) t.qty = t.capacity * f; }
   feeding() {
     const s = this.selector;
-    return this.tanks.filter((t, i) => (s === 'BOTH' || (s === 'LEFT' && i === 0) || (s === 'RIGHT' && i === 1)) && t.qty > t.unusable);
+    // Centre tanks (index >= 2) feed first when present, as on airliners.
+    const all = this.tanks.filter((t, i) => (s === 'BOTH' || (s === 'LEFT' && i === 0) || (s === 'RIGHT' && i === 1)) && t.qty > t.unusable);
+    const centre = all.filter((t) => this.tanks.indexOf(t) >= 2);
+    return centre.length ? centre : all;
   }
   get available() { return this.selector !== 'OFF' && this.feeding().length > 0; }
   /** Burn fuel mass (kg) over this step from selected tanks. */
@@ -23,5 +26,5 @@ export class FuelSystem {
   }
   get totalLitres() { return this.tanks.reduce((a, t) => a + t.qty, 0); }
   get massKg() { return this.totalLitres * this.density; }
-  lowFuel(i) { return this.tanks[i].qty - this.tanks[i].unusable < 19; } // ~5 gal usable
+  lowFuel(i) { const t = this.tanks[i]; return !!t && t.qty - t.unusable < Math.max(19, t.capacity * 0.06); } // ~5 gal (GA) / 6 % (large tanks)
 }

@@ -9,6 +9,7 @@ export const MAGS = { OFF: 0, RIGHT: 1, LEFT: 2, BOTH: 3, START: 4 };
 export class PistonEngine {
   constructor(cfg) {
     this.cfg = cfg;
+    this.kind = 'piston';
     const p = cfg.propeller;
     this.D = p.diameter;
     this.rpm = 0;
@@ -33,7 +34,7 @@ export class PistonEngine {
    * @param {number} V  true airspeed along thrust axis (m/s)
    * @param {{fuelAvailable:boolean, busVolts:number}} sys
    */
-  update(dt, atm, V, sys) {
+  update(dt, atm, V, mach, sys) {
     const c = this.cfg;
     const n = this.rpm / 60;
     const sigma = atm.rho / RHO0;
@@ -102,6 +103,9 @@ export class PistonEngine {
     this.oilPress += (opTarget - this.oilPress) * clamp(dt * 3, 0, 1);
     return this;
   }
+
+  get fuelOn() { return this.mixture > 0.02; }
+  indications() { return { rpm: this.rpm, map: this.map, egt: this.egt, ff: this.fuelFlow, oil: this.oilPress, running: this.running }; }
 
   /** Apply sudden-stoppage / damage effects. */
   damage(engineHealth, propHealth) {

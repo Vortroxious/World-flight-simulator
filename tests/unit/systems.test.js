@@ -9,17 +9,17 @@ describe('Electrical system', () => {
   it('battery discharges with loads and alternator off; alternator recharges', () => {
     const e = new Electrical(cfg.electrical);
     e.switches.battery = true; e.switches.landingLight = true; e.switches.avionics = true;
-    for (let i = 0; i < 600; i++) e.update(1, 0);
+    for (let i = 0; i < 600; i++) e.update(1, false);
     expect(e.soc).toBeLessThan(0.97); expect(e.busVolts).toBeLessThan(25.2);
     e.switches.alternator = true;
     const soc = e.soc;
-    for (let i = 0; i < 600; i++) e.update(1, 2300);
+    for (let i = 0; i < 600; i++) e.update(1, true);
     expect(e.soc).toBeGreaterThan(soc); expect(e.busVolts).toBeCloseTo(28.5, 1);
   });
   it('master off removes all power; avionics bus needs its switch', () => {
     const e = new Electrical(cfg.electrical);
-    e.update(1, 0); expect(e.busVolts).toBe(0);
-    e.switches.battery = true; e.update(1, 0);
+    e.update(1, false); expect(e.busVolts).toBe(0);
+    e.switches.battery = true; e.update(1, false);
     expect(e.busVolts).toBeGreaterThan(23); expect(e.avionicsPowered).toBe(false);
     e.switches.avionics = true; expect(e.avionicsPowered).toBe(true);
   });
