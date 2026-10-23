@@ -14,7 +14,8 @@
     "data:airports": "node scripts/build-airports.mjs",
     "data:osm": "node scripts/bake-osm-airport.mjs",
     "data:terrain": "node scripts/bake-terrain-fallback.mjs",
-    "data:all": "npm run data:airports && npm run data:osm && npm run data:terrain"
+    "data:all": "npm run data:airports && npm run data:osm && npm run data:terrain",
+    "build:artifact": "node scripts/build-artifact.mjs --verify"
   },
   "dependencies": {
     "three": "^0.186.1"

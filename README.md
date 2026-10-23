@@ -52,6 +52,7 @@ Opening `index.html` directly from disk does not work, because browsers block ES
 ```bash
 npm run build        # static bundle in dist/ (deploy to any static host, e.g. GitHub Pages)
 npm run preview      # serve the production build locally
+npm run build:artifact  # build + smoke-test the shareable preview page (see CLAUDE.md)
 ```
 
 ## First flight

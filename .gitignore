@@ -3,3 +3,4 @@ dist/
 scripts/.cache/
 tests/e2e/output/
 *.log
+.artifact/
